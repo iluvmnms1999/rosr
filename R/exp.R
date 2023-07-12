@@ -1,1 +1,2 @@
-usgs_dat <- read.table("data-raw/7TupIUXA", header = TRUE, sep = "\t")
+usgs_dat <- read.table("data-raw/ca_usgs", header = TRUE, sep = "\t")
+head(usgs_dat)
