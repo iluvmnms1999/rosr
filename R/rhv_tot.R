@@ -1,68 +1,38 @@
 ## libraries
 library(rsnodas2)
-# library(tidyverse)
-# library(lubridate)
 library(imputeTS)
+library(lubridate)
 library(data.table)
-library(lutz) # has tz_lookup_coords()
-library(fasttime) # has fastPOSIXct() -- having to convert everythi
+library(fasttime)
+# library(lutz) - how I found time zones
 
-# initial test with original function -> time = 15.96229 mins (BAD)
-# need to get it below 30 secs
-# GOT IT DOWN TO 1.621509 mins FOR ONE STATION
-beg <- Sys.time()
-clean_dat(09180000)
-end <- Sys.time()
-end - beg
-
-# tz testing
-# usgs_id[, tz := tz_lookup_coords(dec_lat_va, dec_long_va, method = "accurate")]
-usgs_id <- fread("data-raw/usgs_id.csv")
-
-# test station
-flow <- download_usgs(
-  freq = "uv",
-  sites = "09180000",
-  destpath = paste0(getwd(), "/data-raw/usgs"),
-  begin_date = as.Date("1900-01-02"),
-  end_date = Sys.Date()
-)
-
-setDT(flow)
+# get tzs
+# usgs_id[, tz := lutz::tz_lookup_coords(dec_lat_va, dec_long_va, method = "accurate")]
 
 ## retaining hourly data
 hv <- function(usgs, timez) {
+  # convert to data.table
   setDT(usgs)
-  # usgs$year <- year(usgs$date)
+
+  # enable grouping by individual time specs
   usgs[, year := substr(date, 1, 4)]
-  # usgs$month <- formatC(month(usgs$date), width = 2, format = "d", flag = "0")
   usgs[, month := substr(date, 6, 7)]
-  # usgs$day <- formatC(mday(usgs$date), width = 2, format = "d", flag = "0")
   usgs[, day := substr(date, 9, 10)]
-  # usgs$hour <- substr(usgs$time, start = 1, stop = 2)
   usgs[, hour:= substr(time, 1, 2)]
-  # grusgs <- usgs %>%
-  # group_by(year, month, day, hour) %>%
-  # mutate(max_flow = max(v00060)) %>%
-  # mutate(hdt = ymd_h(as.integer(paste0(year, month, day, hour)),
-  #                    tz = "US/Pacific")) %>%
-  # ungroup() %>%
-  # group_by(hdt) %>%
-  # summarise(
-  #   id = last(site_no),
-  #   max_flow = last(max_flow),
-  #   datetime = last(hdt)
-  # ) %>%
-  # select(-hdt)
+
+  # calculate hourly maximum flow
   usgs[, max_flow := max(v00060), by = .(year, month, day, hour)]
+
+  # convert from character to datetime object and set tz
   usgs[, hdt := fasttime::fastPOSIXct(paste0(date, " ", hour, ":00:00"),
                                       tz = "GMT"),
        by = .(year, month, day, hour)]
   usgs[, datetime := lubridate::force_tz(hdt, tzone = timez)]
+
+  # save only hourly info
   grusgs <- usgs[, .(id = last(site_no),
-           max_flow = last(max_flow)),
-       by = datetime]
-  # grusgs
+                     max_flow = last(max_flow)),
+                 by = datetime]
   grusgs
 }
 
@@ -71,7 +41,7 @@ clean_dat <- function(site_no, timez) {
   usgs <- download_usgs(freq = "uv",
                         destpath = paste0(getwd(), "/data-raw/usgs"),
                         sites = as.character(site_no),
-                        begin_date = as.Date("1900-01-02"),
+                        begin_date = as.Date("1980-01-02"),
                         end_date = Sys.Date()
   )
 
@@ -94,33 +64,19 @@ clean_dat <- function(site_no, timez) {
 }
 
 ## get data frame with all stations
-beg <- Sys.time()
-stations <- c(10311000, 10309010, 10310500, 10309000, 10311200, 10308200,
-              10310000, 10311100)
-# beg_dates <- c("1939-05-12", "1948-03-01", "1900-01-02", "1976-07-01",
-#                "1976-06-01", "1960-09-01")
-timezones <- rep("America/Los_Angeles", times = length(stations))
-stat_list <- vector("list", length = length(stations))
-for (i in seq_along(stations)) {
-  stat_list[[i]] <- clean_dat(stations[i], timezones[i])
+usgs_fs_cl <- data.table::fread("data-raw/usgs_fs_cl.csv")
+stat_list <- vector("list", length = nrow(usgs_fs_cl))
+for (i in seq_along(usgs_fs_cl$site_no)) {
+  stat_list[[i]] <- tryCatch({clean_dat(usgs_fs_cl$site_no[i],
+                                        usgs_fs_cl$tz[i])
+  }, error = function(e) e)
 }
 stat_mat <- do.call(rbind, stat_list)
 rhv_tot <- as.data.frame(stat_mat)
-end <- Sys.time()
-end - beg
 
 usethis::use_data(rhv_tot, overwrite = TRUE)
 
-write.csv(rhv_tot, "data-raw/shv_tot_UPD071323.csv", row.names = FALSE)
-
-
-
-
-
-
-
-## TEST
 beg <- Sys.time()
-x <- clean_dat(09180000, "America/Denver")
+clean_dat(9429180, "America/Los_Angeles")
 end <- Sys.time()
 end - beg
