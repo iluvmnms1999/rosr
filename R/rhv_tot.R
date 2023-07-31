@@ -64,7 +64,7 @@ clean_dat <- function(site_no, timez) {
 }
 
 ## get data frame with all stations
-usgs_fs_cl <- data.table::fread("data-raw/usgs_fs_cl.csv")
+
 stat_list <- vector("list", length = nrow(usgs_fs_cl))
 for (i in seq_along(usgs_fs_cl$site_no)) {
   stat_list[[i]] <- tryCatch({clean_dat(usgs_fs_cl$site_no[i],
@@ -75,8 +75,3 @@ stat_mat <- do.call(rbind, stat_list)
 rhv_tot <- as.data.frame(stat_mat)
 
 usethis::use_data(rhv_tot, overwrite = TRUE)
-
-beg <- Sys.time()
-clean_dat(9429180, "America/Los_Angeles")
-end <- Sys.time()
-end - beg
