@@ -55,13 +55,9 @@ clean_dat <- function(site_no, timez) {
   )
   id <- rep(usgs$site_no[1], times = length(datetime))
   df <- data.frame(id, datetime)
-  # setDT(df)
+  setDT(df)
 
   # produce actual time series
-  # comp_test <- test[df, on = c(id = "id")]
-  # setkey(df, "id")
-  # setkey(test, "site_no")
-  # comp_test <- test[df]
   comp_test <- dplyr::left_join(df, test)
   imp_usgs <- imputeTS::na_interpolation(comp_test, option = "linear")
 
@@ -72,19 +68,23 @@ clean_dat <- function(site_no, timez) {
 # import station ids
 usgs_fs_cl <- data.table::fread("data-raw/usgs_fs_fin.csv")
 
-# filter for states of interest
-states <- c("WY", "NV", "CA", "CO", "ID", "MT", "NM", "OR", "UT", "WA", "AZ")
-usgs_fs_cl <- usgs_fs_cl[state %in% states,]
+# filter for states of interest - already have WY
+states <- c("NV", "CA", "CO", "ID", "MT", "NM", "OR", "UT", "WA", "AZ")
 
 state_list <- vector("list", length = length(states))
 for (x in seq_along(states)) {
   usgs_abb <- usgs_fs_cl[state == states[x]]
   station_list <- vector("list", length = nrow(usgs_abb))
+  vec <- c()
   for (i in seq_along(usgs_abb$site_no)) {
     station_list[[i]] <- tryCatch({clean_dat(usgs_abb$site_no[i],
                                              usgs_abb$tz[i])
     }, error = function(e) e)
+    if (!inherits(station_list[[i]], "data.frame")) {
+      vec[i] <- i
+    }
   }
+  station_list <- station_list[-vec[which(!is.na(vec))]]
   state_list[[x]] <- station_list
 }
 
@@ -92,7 +92,7 @@ for (x in seq_along(states)) {
   state_mat <- do.call(rbind, state_list[[x]])
   rhv_tot <- as.data.frame(stat_mat)
   dplyr::saveRDS(rhv_tot,
-                 file = paste0("data-raw/rhv_tot_", states[x], ".rds"),
+                 file = paste0("data-raw/rhv_tot_", states[x], ".RData"),
                  compress = TRUE)
 }
 
@@ -101,12 +101,8 @@ usethis::use_data(rhv_tot, overwrite = TRUE)
 
 
 
-
-
-
-
-
 ############### TEST (WY)
+#station_list <- readRDS("data-raw/station_list_WY.RData")
 usgs_abb <- usgs_fs_cl[state == "WY"]
 station_list <- vector("list", length = nrow(usgs_abb))
 for (i in seq_along(usgs_abb$site_no)) {
@@ -114,9 +110,14 @@ for (i in seq_along(usgs_abb$site_no)) {
                                            usgs_abb$tz[i])
   }, error = function(e) e)
 }
+vec <- c()
+for (i in seq_len(length(station_list))) {
+  if (!inherits(station_list[[i]], "data.frame")) {
+    vec[i] <- i
+  }
+}
+station_list <- station_list[-vec[which(!is.na(vec))]]
 state_mat <- do.call(rbind, station_list)
-rhv_tot <- as.data.frame(stat_mat)
-dplyr::saveRDS(rhv_tot,
-               file = "data-raw/rhv_tot_WY.rds",
-               compress = TRUE)
+rhv_tot <- as.data.frame(state_mat)
+saveRDS(rhv_tot, file = "data-raw/rhv_tot_WY.RData", compress = TRUE)
 
