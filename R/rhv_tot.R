@@ -85,16 +85,21 @@ for (x in seq_along(states)) {
     }
   }
   station_list <- station_list[-vec[which(!is.na(vec))]]
-  state_list[[x]] <- station_list
-}
-
-for (x in seq_along(states)) {
-  state_mat <- do.call(rbind, state_list[[x]])
+  state_mat <- do.call(rbind, station_list)
   rhv_tot <- as.data.frame(stat_mat)
   dplyr::saveRDS(rhv_tot,
                  file = paste0("data-raw/rhv_tot_", states[x], ".RData"),
                  compress = TRUE)
+  # state_list[[x]] <- station_list
 }
+
+# for (x in seq_along(states)) {
+#   # state_mat <- do.call(rbind, state_list[[x]])
+#   # rhv_tot <- as.data.frame(stat_mat)
+#   # dplyr::saveRDS(rhv_tot,
+#   #                file = paste0("data-raw/rhv_tot_", states[x], ".RData"),
+#   #                compress = TRUE)
+# }
 
 usethis::use_data(rhv_tot, overwrite = TRUE)
 
