@@ -1,45 +1,55 @@
 # read in max hourly measurements
-rhv_tot_WY <- readRDS("data-raw/rhv_tot_WY.RData")
-data.table::setDT(rhv_tot_WY)
+states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WY")
 usgs_fs_cl <- data.table::fread("data-raw/usgs_fs_fin.csv")
-usgs_fs_WY <- usgs_fs_cl[state == "WY"]
 
-def <- usgs_fs_WY[!is.na(discharge)]
-undef <- usgs_fs_WY[is.na(discharge)]
+for (i in seq_along(states)) {
+  rhv_tot <- readRDS(paste0("data-raw/rhv_tot_", states[i], ".RDS"))
+  data.table::setDT(rhv_tot)
+  usgs_fs <- usgs_fs_cl[state == states[i]]
 
-# to figure out general trend in proportion for defined thresholds
-prop_vec1 <- c()
-for (i in seq_along(def$site_no)) {
-  # subset on station id
-  sub <- rhv_tot_WY[id == formatC(def$site_no[i],
-                                  width = 8,
-                                  format = "d",
-                                  flag = "0")]
-  # add year to data table
-  sub[, year := data.table::year(datetime)]
-  # get ann_max
-  tib <- sub[, .(ann_max = max(max_flow)), by = year]
-  prop <- def$discharge[i] / max(tib$ann_max)
-  prop_vec1[i] <- prop
+  def <- usgs_fs[!is.na(discharge)]
+
+  # to figure out general trend in proportion for defined thresholds
+  prop_vec1 <- c()
+  for (j in seq_along(def$site_no)) {
+    # subset on station id
+    sub <- rhv_tot[id == formatC(def$site_no[j],
+                                    width = 8,
+                                    format = "d",
+                                    flag = "0")]
+    # add year to data table
+    sub[, year := data.table::year(datetime)]
+    # get ann_max
+    tib <- sub[, .(ann_max = max(max_flow)), by = year]
+    prop <- def$discharge[j] / max(tib$ann_max)
+    prop_vec1[j] <- prop
+  }
+  med <- median(prop_vec1, na.rm = TRUE)
+
+  # use median proportion to estimate flood stages for other stations
+  vec <- c()
+  for (k in seq_along(usgs_fs$discharge)) {
+    if (!is.na(usgs_fs$discharge[k])) {
+      vec[k] <- usgs_fs$discharge[k]
+    } else {
+      sub <- rhv_tot[id == formatC(usgs_fs$site_no[k],
+                                      width = 8,
+                                      format = "d",
+                                      flag = "0")]
+      vec[k] <- round(med * max(sub$max_flow[sub$max_flow != max(sub$max_flow)]),
+                      digits = 2)
+    }
+  }
+  vec[vec < 0] <- NA
+
+  usgs_fs_cl[state == states[i]]$discharge <- vec
 }
-median(prop_vec1, na.rm = TRUE)
+# just need to do it for WA and AZ and then we'll have everything and know which
+# ones need to be redone
+saveRDS(usgs_fs_cl, "data-raw/usgs_fs_comp.RDS")
 
-# to get thresholds for undefined
-prop_vec2 <- c()
-for (i in seq_along(undef$site_no)) {
-  # subset on station id
-  sub <- rhv_tot_WY[id == formatC(undef$site_no[i], width = 8, format = "d", flag = "0")]
-  # add year to data table
-  sub[, year := data.table::year(datetime)]
-  # get ann_max
-  tib <- sub[, .(ann_max = max(max_flow)), by = year]
-  prop <- quantile(tib$ann_max, 0.95) / max(tib$ann_max)
-  prop_vec2[i] <- prop
-}
-median(prop_vec2, na.rm = TRUE)
 
-# actual cutoff value
-max(tib$ann_max) * prop
+
 
 # maybe look into pracma::findpeaks for peak detection because you can specify
 # threshold instead of relying on relationship to maximum
@@ -52,3 +62,26 @@ tib <- sub %>% group_by(year) %>% summarize(ann_max = max(max_flow))
 prop <- quantile(tib$ann_max, .75) / max(tib$ann_max)
 prop
 max(tib$ann_max) * prop
+
+# test peakwindow and findpeaks
+date <- seq(as.Date("2014-01-01"), as.Date("2014-12-31"), by = "day")
+val <- sample(1:1000, 365)
+df <- data.frame(date, val)
+cardidates::peakwindow(df, minpeak = 1.24) # does work with proportions higher than 1
+
+peaks <- pracma::findpeaks(df$val, minpeakheight = 750, nups = 2)
+peaks <- as.data.frame(peaks)
+peaks$V5 <- df$date[peaks$V2]
+
+peak_plot <- function(x, beg_date, end_date) {
+  # create plot of data and peak classification
+  ggplot2::ggplot(x, ggplot2::aes(x = date,
+                                  y = val)) +
+    geom_point(size = .2, col = "grey50") +
+    xlab("Date") +
+    ylab("Peak") +
+    geom_point(data = peaks, aes(V5, V1)
+    )
+}
+
+peak_plot(df, "2014-01-01", "2014-03-01")

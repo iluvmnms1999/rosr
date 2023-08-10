@@ -1,17 +1,40 @@
+df_peaks_all <- function(minpeaks_spec = 100) {
+  peaks_list <- vector("list", length = nrow(cutoffs))
+  for (i in seq_len(nrow(cutoffs))) {
+    temp <- dplyr::filter(rhv_tot, id == cutoffs$stations[i])
+    if (minpeaks_spec == 100) {
+      peaks <- peakdf(temp, fs = cutoffs$fson[i],
+                      minpeak = cutoffs$minpeaks100[i],
+                      min_cutoff = cutoffs$minor[i],
+                      maj_cutoff = cutoffs$major[i])
+    } else if (minpeaks_spec == 75) {
+      peaks <- peakdf(temp, fs = cutoffs$fson[i],
+                      minpeak = cutoffs$minpeaks75[i],
+                      min_cutoff = cutoffs$minor[i],
+                      maj_cutoff = cutoffs$major[i])
+    } else {
+      peaks <- peakdf(temp, fs = cutoffs$fson[i],
+                      minpeak = cutoffs$minpeaks50[i],
+                      min_cutoff = cutoffs$minor[i],
+                      maj_cutoff = cutoffs$major[i])
+    }
+    peaks_list[[i]] <- peaks
+  }
+  peaks_mat <- do.call(rbind, peaks_list)
+  peaks_df <- as.data.frame(peaks_mat)
+  peaks_df
+}
+
 ## peak detection function
 peakdf <- function(df, fs, minpeak, min_cutoff, maj_cutoff = 1) {
-  peakspor <- peakwindow(df$datetime, df$max_flow, minpeak = minpeak,
+  peakspor <- cardidates::peakwindow(df$datetime, df$max_flow, minpeak = minpeak,
   )
   peakspordf <- peakspor[[1]]
   dt <- as.POSIXct(peakspor[[1]][, 3], "US/Pacific", origin = "1970-01-01")
   peakspordf$dt <- dt
-  if (fs == TRUE) {
-    peakspordf$type <- mm_cutoff(peakspordf, min_cutoff, maj_cutoff)
-  } else {
-    peakspordf$type <- f_cutoff(peakspordf, min_cutoff)
-  }
+  peakspordf$type <- f_cutoff(peakspordf, min_cutoff)
   peakspordf$id <- rep(df$id[1], nrow(peakspordf))
-  peakspordf[, c(8, 6, 5, 7)]
+  peakspordf[, c(8, 6, 5, 7, 2)]
 }
 
 f_cutoff <- function(df, min_cutoff) {
@@ -26,19 +49,6 @@ f_cutoff <- function(df, min_cutoff) {
   type
 }
 
-mm_cutoff <- function(df, min_cutoff, maj_cutoff) {
-  type <- vector()
-  for (i in seq_len(nrow(df))){
-    if (df$y[i] >= maj_cutoff) {
-      type[i] <- "major"
-    } else if (df$y[i] < maj_cutoff && df$y[i] >= min_cutoff) {
-      type[i] <- "minor"
-    } else {
-      type[i] <- "naf"
-    }
-  }
-  type
-}
 
 ## testing
 # some important variables
