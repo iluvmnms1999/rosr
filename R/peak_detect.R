@@ -1,71 +1,67 @@
-df_peaks_all <- function(minpeaks_spec = 100) {
-  peaks_list <- vector("list", length = nrow(cutoffs))
-  for (i in seq_len(nrow(cutoffs))) {
-    temp <- dplyr::filter(rhv_tot, id == cutoffs$stations[i])
-    if (minpeaks_spec == 100) {
-      peaks <- peakdf(temp, fs = cutoffs$fson[i],
-                      minpeak = cutoffs$minpeaks100[i],
-                      min_cutoff = cutoffs$minor[i],
-                      maj_cutoff = cutoffs$major[i])
-    } else if (minpeaks_spec == 75) {
-      peaks <- peakdf(temp, fs = cutoffs$fson[i],
-                      minpeak = cutoffs$minpeaks75[i],
-                      min_cutoff = cutoffs$minor[i],
-                      maj_cutoff = cutoffs$major[i])
+# get peaks for all states
+states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WY")
+usgs_fs_cl <- readRDS("data-raw/usgs_fs_comp3.RDS")
+
+for (x in seq_along(states)) {
+  usgs_fs <- usgs_fs_cl[state == states[x] & !is.na(discharge) & minpeak < 1]
+  data.table::setDT(usgs_fs)
+  peaks_list <- vector("list", length = nrow(usgs_fs))
+
+  # begin loop
+  rhv_tot <- readRDS(paste0("data-raw/rhv_tot_", states[x], ".RDS"))
+  data.table::setDT(rhv_tot)
+  vec <- c()
+  for (i in seq_len(nrow(usgs_fs))) {
+    temp <- rhv_tot[id == formatC(usgs_fs$site_no[i],
+                                  width = 8,
+                                  format = "d",
+                                  flag = "0")]
+    if (nrow(temp) == 0){
+      peaks_list[[i]] <- NA
     } else {
-      peaks <- peakdf(temp, fs = cutoffs$fson[i],
-                      minpeak = cutoffs$minpeaks50[i],
-                      min_cutoff = cutoffs$minor[i],
-                      maj_cutoff = cutoffs$major[i])
+      peaks_list[[i]] <- peakdf(df = temp, minpeak = usgs_fs$minpeak[i])
     }
-    peaks_list[[i]] <- peaks
+
+    if (!inherits(peaks_list[[i]], "data.frame")) {
+      vec[i] <- i
+    }
   }
-  peaks_mat <- do.call(rbind, peaks_list)
+
+  if (!inherits(vec, "NULL")) {
+    peaks_list2 <- peaks_list[-vec[which(!is.na(vec))]]
+  } else {
+    peaks_list2 <- peaks_list
+  }
+
+  peaks_mat <- do.call(rbind, peaks_list2)
   peaks_df <- as.data.frame(peaks_mat)
-  peaks_df
+  saveRDS(peaks_df, paste0("data-raw/peaks_df_", states[x], ".RDS"))
 }
 
 ## peak detection function
-peakdf <- function(df, minpeak, cutoff) {
+peakdf <- function(df, minpeak) {
   peakspor <- cardidates::peakwindow(df$datetime, df$max_flow, minpeak = minpeak,
   )
   peakspordf <- peakspor[[1]]
   dt <- as.POSIXct(peakspor[[1]][, 3], "US/Pacific", origin = "1970-01-01")
   peakspordf$dt <- dt
-  peakspordf$type <- f_cutoff(peakspordf, cutoff)
+  # peakspordf$type <- f_cutoff(peakspordf, cutoff) - add cutoff back in as
+  # variable if you decide to specify type
   peakspordf$id <- rep(df$id[1], nrow(peakspordf))
-  peakspordf[, c(8, 6, 5, 7, 2)]
+  peakspordf[, c(7, 6, 5)]
 }
 
-f_cutoff <- function(df, cutoff) {
-  type <- vector()
-  for (i in seq_len(nrow(df))){
-    if (df$y[i] >= cutoff) {
-      type[i] <- "flood"
-    } else {
-      type[i] <- "naf"
-    }
-  }
-  type
-}
+# f_cutoff <- function(df, cutoff) {
+#   type <- vector()
+#   for (i in seq_len(nrow(df))){
+#     if (df$y[i] >= cutoff) {
+#       type[i] <- "flood"
+#     } else {
+#       type[i] <- "naf"
+#     }
+#   }
+#   type
+# }
 
-
-## testing
-# some important variables
-stations <- c("10311000", "10310500", "10309000", "10311200",
-              "10311100", "10308200", "10310000")
-major <- c(8300, NA, 10000, NA, NA, 14354, 6600)
-minor <- c(7000, 45, 5500, 26, 14.75, 7400, 1200)
-fson <- c(TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE)
-minpeaks <- c(0.2, 0.172, 0.41, 0.079, 0.117, 0.39, 0.43)
-
-## get peaks for all stations with specified minpeaks according to stages
-peaks_list <- vector("list", length = length(stations))
-for (i in seq_along(stations)) {
-  temp <- filter(shv_tot, id == stations[i])
-  peaks <- peakdf(temp, fson[i], minpeak = minpeaks_50[i],
-                  min_cutoff = minor[i], maj_cutoff = major[i])
-  peaks_list[[i]] <- peaks
-}
-peaks_mat <- do.call(rbind, peaks_list50)
-peaks_df <- as.data.frame(peaks_mat50)
+p_ca <- readRDS("data-raw/peaks_df_CA.RDS")
+p_nv <- readRDS("data-raw/peaks_df_NV.RDS")
