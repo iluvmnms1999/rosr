@@ -26,21 +26,21 @@ df_peaks_all <- function(minpeaks_spec = 100) {
 }
 
 ## peak detection function
-peakdf <- function(df, fs, minpeak, min_cutoff, maj_cutoff = 1) {
+peakdf <- function(df, minpeak, cutoff) {
   peakspor <- cardidates::peakwindow(df$datetime, df$max_flow, minpeak = minpeak,
   )
   peakspordf <- peakspor[[1]]
   dt <- as.POSIXct(peakspor[[1]][, 3], "US/Pacific", origin = "1970-01-01")
   peakspordf$dt <- dt
-  peakspordf$type <- f_cutoff(peakspordf, min_cutoff)
+  peakspordf$type <- f_cutoff(peakspordf, cutoff)
   peakspordf$id <- rep(df$id[1], nrow(peakspordf))
   peakspordf[, c(8, 6, 5, 7, 2)]
 }
 
-f_cutoff <- function(df, min_cutoff) {
+f_cutoff <- function(df, cutoff) {
   type <- vector()
   for (i in seq_len(nrow(df))){
-    if (df$y[i] >= min_cutoff) {
+    if (df$y[i] >= cutoff) {
       type[i] <- "flood"
     } else {
       type[i] <- "naf"

@@ -1,6 +1,8 @@
 # read in max hourly measurements
 states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WY")
-usgs_fs_cl <- data.table::fread("data-raw/usgs_fs_fin.csv")
+usgs_fs_cl <- readRDS("data-raw/usgs_fs_comp.RDS")
+data.table::setDT(usgs_fs_cl)
+usgs_fs_cl$minpeak <- rep(0, times = nrow(usgs_fs_cl))
 
 for (i in seq_along(states)) {
   rhv_tot <- readRDS(paste0("data-raw/rhv_tot_", states[i], ".RDS"))
@@ -14,9 +16,9 @@ for (i in seq_along(states)) {
   for (j in seq_along(def$site_no)) {
     # subset on station id
     sub <- rhv_tot[id == formatC(def$site_no[j],
-                                    width = 8,
-                                    format = "d",
-                                    flag = "0")]
+                                 width = 8,
+                                 format = "d",
+                                 flag = "0")]
     # add year to data table
     sub[, year := data.table::year(datetime)]
     # get ann_max
@@ -33,9 +35,9 @@ for (i in seq_along(states)) {
       vec[k] <- usgs_fs$discharge[k]
     } else {
       sub <- rhv_tot[id == formatC(usgs_fs$site_no[k],
-                                      width = 8,
-                                      format = "d",
-                                      flag = "0")]
+                                   width = 8,
+                                   format = "d",
+                                   flag = "0")]
       vec[k] <- round(med * max(sub$max_flow[sub$max_flow != max(sub$max_flow)]),
                       digits = 2)
     }
@@ -43,12 +45,22 @@ for (i in seq_along(states)) {
   vec[vec < 0] <- NA
 
   usgs_fs_cl[state == states[i]]$discharge <- vec
+
+  # get minpeaks proportions
+  props <- c()
+  for (x in seq_along(usgs_fs$site_no)) {
+    sub <- rhv_tot[id == formatC(usgs_fs$site_no[x],
+                                 width = 8,
+                                 format = "d",
+                                 flag = "0")]
+    props[x] <- usgs_fs$discharge[x] / max(sub$max_flow)
+  }
+  usgs_fs_cl[state == states[i]]$minpeak <- props
 }
+
 # just need to do it for WA and AZ and then we'll have everything and know which
 # ones need to be redone
-saveRDS(usgs_fs_cl, "data-raw/usgs_fs_comp.RDS")
-
-
+saveRDS(usgs_fs_cl, "data-raw/usgs_fs_comp2.RDS")
 
 
 # maybe look into pracma::findpeaks for peak detection because you can specify
