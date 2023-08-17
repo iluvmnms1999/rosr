@@ -1,5 +1,5 @@
 # read in max hourly measurements
-# states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WY")
+states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WY")
 states <- c("AZ", "WA")
 usgs_fs_cl <- readRDS("data-raw/usgs_fs_comp3.RDS")
 data.table::setDT(usgs_fs_cl)
