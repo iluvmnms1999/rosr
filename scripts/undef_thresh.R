@@ -1,12 +1,13 @@
 # read in max hourly measurements
-states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WY")
-usgs_fs_cl <- data.table::fread("data-raw/usgs_fs_fin.csv")
+# states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WY")
+states <- c("AZ", "WA")
+usgs_fs_cl <- readRDS("data-raw/usgs_fs_comp3.RDS")
 data.table::setDT(usgs_fs_cl)
 usgs_fs_cl <- usgs_fs_cl[, est := is.na(discharge)]
 usgs_fs_cl <- usgs_fs_cl[, minpeak := rep(0, length = nrow(usgs_fs_cl))]
 
 for (i in seq_along(states)) {
-  rhv_tot <- readRDS(paste0("data-raw/rhv_tot_", states[i], ".RDS"))
+  rhv_tot <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_", states[i], ".RDS"))
   data.table::setDT(rhv_tot)
   usgs_fs <- usgs_fs_cl[state == states[i]]
 
@@ -63,7 +64,7 @@ for (i in seq_along(states)) {
 
 # just need to do it for WA and AZ and then we'll have everything and know which
 # ones need to be redone
-saveRDS(usgs_fs_cl, "data-raw/usgs_fs_comp3.RDS")
+saveRDS(usgs_fs_cl, "data-raw/usgs_fs_comp4.RDS")
 
 
 # maybe look into pracma::findpeaks for peak detection because you can specify
