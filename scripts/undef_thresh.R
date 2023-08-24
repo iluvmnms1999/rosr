@@ -1,17 +1,18 @@
 # read in max hourly measurements
-states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WY")
-states <- c("AZ", "WA")
-usgs_fs_cl <- readRDS("data-raw/usgs_fs_comp3.RDS")
+states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WY", "AZ", "WA")
+usgs_fs_cl <- readRDS("data-raw/usgs_fs_comp4.RDS")
 data.table::setDT(usgs_fs_cl)
-usgs_fs_cl <- usgs_fs_cl[, est := is.na(discharge)]
+# usgs_fs_cl <- usgs_fs_cl[, est := is.na(discharge)]
 usgs_fs_cl <- usgs_fs_cl[, minpeak := rep(0, length = nrow(usgs_fs_cl))]
 
+prop_est_lst2 <- vector("list", length = length(states))
+props_lst2 <- vector("list", length = length(states))
 for (i in seq_along(states)) {
   rhv_tot <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_", states[i], ".RDS"))
   data.table::setDT(rhv_tot)
   usgs_fs <- usgs_fs_cl[state == states[i]]
 
-  def <- usgs_fs[!is.na(discharge)]
+  def <- usgs_fs[est == FALSE]
 
   # to figure out general trend in proportion for defined thresholds
   prop_est <- c()
@@ -28,12 +29,12 @@ for (i in seq_along(states)) {
     prop <- def$discharge[j] / max(tib$ann_max)
     prop_est[j] <- prop
   }
+  prop_est_lst2[[i]] <- prop_est
   med <- median(prop_est, na.rm = TRUE)
 
   # use median proportion to estimate flood stages for other stations and add
   # minpeaks props
   vec <- c()
-  props <- c()
   for (k in seq_along(usgs_fs$discharge)) {
     sub <- rhv_tot[id == formatC(usgs_fs$site_no[k],
                                  width = 8,
@@ -59,6 +60,7 @@ for (i in seq_along(states)) {
                                  flag = "0")]
     props[x] <- usgs_fs$discharge[x] / max(sub$max_flow)
   }
+  props_lst2[[i]] <- props
   usgs_fs_cl[state == states[i]]$minpeak <- props
 }
 
@@ -66,6 +68,27 @@ for (i in seq_along(states)) {
 # ones need to be redone
 saveRDS(usgs_fs_cl, "data-raw/usgs_fs_comp4.RDS")
 
+# retry by looking at existing proportions
+states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WY", "WA", "AZ")
+rhv <- list(rhv_ca, rhv_co, rhv_id, rhv_mt, rhv_nm, rhv_nv, rhv_or, rhv_ut,
+            rhv_wy, rhv_wa, rhv_az)
+
+ex_props <- vector("list", length = length(states))
+for (i in seq_along(states)) {
+  state <- rep(states[i], length(prop_est_lst2[[i]]))
+  df <- data.frame(state, prop_est_lst2[[i]])
+  ex_props[[i]] <- df
+}
+ex_props_mat <- do.call(rbind, ex_props)
+ex_props_df <- as.data.frame(ex_props_mat)
+data.table::setDT(ex_props_df)
+colnames(ex_props_df) <- c("state", "prop")
+
+summary(ex_props_df$prop)
+ex_props_df |>
+  dplyr::filter(prop > 0, prop < 1) |>
+ggplot(aes(x = prop)) +
+  geom_density()
 
 # maybe look into pracma::findpeaks for peak detection because you can specify
 # threshold instead of relying on relationship to maximum

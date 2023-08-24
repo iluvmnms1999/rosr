@@ -108,8 +108,10 @@ rhv_wy <- readRDS("data-raw/rhv_tot/rhv_tot_WY.RDS")
 rhv_wa <- readRDS("data-raw/rhv_tot/rhv_tot_WA.RDS")
 rhv_az <- readRDS("data-raw/rhv_tot/rhv_tot_AZ.RDS")
 
-rhv <- list(rhv_ca, rhv_co, rhv_id, rhv_mt, rhv_nm, rhv_nv, rhv_or, rhv_ut,
-            rhv_wy, rhv_wa, rhv_az)
+# rhv <- list(rhv_ca, rhv_co, rhv_id, rhv_mt, rhv_nm, rhv_nv, rhv_or, rhv_ut,
+#             rhv_wy, rhv_wa, rhv_az)
+states <- c("WA", "AZ")
+rhv <- list(rhv_wa, rhv_az)
 
 miss_sites <- vector("list", length = length(states))
 for (i in seq_along(states)) {
