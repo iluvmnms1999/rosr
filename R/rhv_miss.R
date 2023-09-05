@@ -63,8 +63,8 @@ clean_dat <- function(site_no, timez) {
 ## get data frame with all stations
 # import station ids
 usgs_fs_cl <- data.table::fread("data-raw/usgs_fs_fin.csv")
-miss_stations <- readRDS("data-raw/missing_stations_comp.RDS")
-usgs_fs_miss <- head(usgs_fs_cl[site_no %in% miss_stations$missing])
+missing_stations <- readRDS("data-raw/missing_stations_comp.RDS")
+usgs_fs_miss <- head(usgs_fs_cl[site_no %in% missing_stations$missing])
 
 # filter for states of interest - already have WY
 # states <- c("AZ", "CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WA", "WY")
@@ -167,3 +167,19 @@ for (i in seq_along(states)) {
 no_peaks_mat <- do.call(rbind, miss_sites)
 no_peaks_df <- as.data.frame(no_peaks_mat)
 saveRDS(no_peaks_df, "data-raw/no_stationdata_df2.RDS")
+
+
+
+
+
+
+
+
+
+
+usgs <- download_usgs(freq = "uv",
+                      destpath = paste0(getwd(), "/data-raw/usgs"),
+                      sites = "10251300",
+                      begin_date = as.Date("1980-01-02"),
+                      end_date = Sys.Date()
+)

@@ -47,7 +47,10 @@ download_usgs <- function(freq = "uv", sites = c("09180000", "09180500"),
           destpath, "/site", i
         )
 
-        try_val <- try(download.file(url_i, destfile, timeout = 180)) # added timeout
+        getOption("timeout")
+        options(timeout = 300)
+
+        try_val <- try(download.file(url_i, destfile, timeout = 300)) # added timeout
 
         if (inherits(try_val, "try-error")) {
           try_val <- tryCatch(
