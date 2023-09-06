@@ -5,6 +5,11 @@ library(lubridate)
 library(data.table)
 library(fasttime)
 source("R/download_usgs_ind.R")
+# from OG download_usgs function
+library(anytime)
+library(httr)
+library(dplyr)
+library(tidyr)
 
 ## retaining hourly data
 hv <- function(usgs, timez) {
@@ -64,11 +69,10 @@ clean_dat <- function(site_no, timez) {
 # import station ids
 usgs_fs_cl <- data.table::fread("data-raw/usgs_fs_fin.csv")
 missing_stations <- readRDS("data-raw/missing_stations_comp.RDS")
-usgs_fs_miss <- head(usgs_fs_cl[site_no %in% missing_stations$missing])
+usgs_fs_miss <- usgs_fs_cl[site_no %in% missing_stations$missing]
 
 # filter for states of interest - already have WY
-# states <- c("AZ", "CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WA", "WY")
-states <- c("CA", "AZ")
+states <- c("AZ", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WA", "WY")
 
 for (x in seq_along(states)) {
   usgs_abb <- usgs_fs_miss[state == states[x]]
@@ -179,7 +183,8 @@ saveRDS(no_peaks_df, "data-raw/no_stationdata_df2.RDS")
 
 usgs <- download_usgs(freq = "uv",
                       destpath = paste0(getwd(), "/data-raw/usgs"),
-                      sites = "10251300",
+                      sites = "09521100",
                       begin_date = as.Date("1980-01-02"),
                       end_date = Sys.Date()
 )
+head(usgs)

@@ -47,15 +47,12 @@ download_usgs <- function(freq = "uv", sites = c("09180000", "09180500"),
           destpath, "/site", i
         )
 
-        getOption("timeout")
-        options(timeout = 300)
-
-        try_val <- try(download.file(url_i, destfile, timeout = 300)) # added timeout
+        try_val <- try(download.file(url_i, destfile))
 
         if (inherits(try_val, "try-error")) {
           try_val <- tryCatch(
             {
-              download.file(url_i, destfile, timeout = 300) # edited timeout
+              download.file(url_i, destfile, timeout = 500) # changed timeout amount and overrode default with options(timeout = 300)
             },
             error = function(e) {
               cat(
@@ -67,8 +64,7 @@ download_usgs <- function(freq = "uv", sites = c("09180000", "09180500"),
         }
 
         if (!inherits(try_val, "try-error")) {
-          tab_if <- try(data.table::fread(file = destfile, header = T,
-                                          fill = TRUE)[-1, ]) # added fill = TRUE
+          tab_if <- try(data.table::fread(file = destfile, header = T)[-1, ]) # added fill
 
           # probably redundant if statement, but okay for now
           if (nrow(tab_if) != 0) {

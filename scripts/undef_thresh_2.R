@@ -1,4 +1,4 @@
-## this script has the same goals as undef_thresh.R but it used the median
+## this script has the same goals as undef_thresh_1.R but it uses the median
 ## proportion for all existing flood stages rather than applying them
 ## individually by state
 
@@ -23,9 +23,9 @@ for (i in seq_along(states)) {
   for (j in seq_along(def$site_no)) {
     # subset on station id
     temp <- rhv_tot[id == formatC(def$site_no[j],
-                                 width = 8,
-                                 format = "d",
-                                 flag = "0")]
+                                  width = 8,
+                                  format = "d",
+                                  flag = "0")]
     # add year to data table
     temp[, year := data.table::year(datetime)]
     # get ann_max
@@ -34,10 +34,13 @@ for (i in seq_along(states)) {
     prop_est[j] <- prop
   }
   prop_est_lst2[[i]] <- prop_est
-  med <- median(prop_est, na.rm = TRUE)
+}
+ex_props <- unlist(prop_est_lst2)
+med <- median(ex_props, na.rm = TRUE)
 
-  # use median proportion to estimate flood stages for other stations and add
-  # minpeaks props
+# use median proportion to estimate flood stages for other stations and add
+# minpeaks props
+for (i in seq_along(states)) {
   vec <- c()
   for (k in seq_along(usgs_fs$discharge)) {
     sub <- rhv_tot[id == formatC(usgs_fs$site_no[k],
@@ -67,6 +70,7 @@ for (i in seq_along(states)) {
   props_lst2[[i]] <- props
   usgs_fs_cl[state == states[i]]$minpeak <- props
 }
+}
 
 # just need to do it for WA and AZ and then we'll have everything and know which
 # ones need to be redone
@@ -91,7 +95,7 @@ colnames(ex_props_df) <- c("state", "prop")
 summary(ex_props_df$prop)
 ex_props_df |>
   dplyr::filter(prop > 0, prop < 1) |>
-ggplot(aes(x = prop)) +
+  ggplot(aes(x = prop)) +
   geom_density()
 
 # maybe look into pracma::findpeaks for peak detection because you can specify
