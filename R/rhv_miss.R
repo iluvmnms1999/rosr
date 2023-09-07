@@ -188,3 +188,16 @@ usgs <- download_usgs(freq = "uv",
                       end_date = Sys.Date()
 )
 head(usgs)
+
+
+rhv_ca <- readRDS("data-raw/rhv_tot/rhv_tot_CA.RDS")
+rhv_co <- readRDS("data-raw/rhv_tot/rhv_tot_CO.RDS")
+rhv_id <- readRDS("data-raw/rhv_tot/rhv_tot_ID.RDS")
+rhv_mt <- readRDS("data-raw/rhv_tot/rhv_tot_MT.RDS")
+rhv_nm <- readRDS("data-raw/rhv_tot/rhv_tot_NM.RDS")
+rhv_nv <- readRDS("data-raw/rhv_tot/rhv_tot_NV.RDS")
+rhv_or <- readRDS("data-raw/rhv_tot/rhv_tot_OR.RDS")
+rhv_ut <- readRDS("data-raw/rhv_tot/rhv_tot_UT.RDS")
+rhv_wy <- readRDS("data-raw/rhv_tot/rhv_tot_WY.RDS")
+rhv_wa <- readRDS("data-raw/rhv_tot/rhv_tot_WA.RDS")
+rhv_az <- readRDS("data-raw/rhv_tot/rhv_tot_AZ.RDS")
