@@ -9,7 +9,7 @@ for (x in seq_along(states)) {
   peaks_list <- vector("list", length = nrow(usgs_fs))
 
   # begin loop
-  rhv_tot <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_", states[x], ".RDS"))
+  rhv_tot <- readRDS(paste0("data-raw/rhv_miss/rhv_miss_", states[x], ".RDS"))
   data.table::setDT(rhv_tot)
   vec <- c()
   for (i in seq_len(nrow(usgs_fs))) {
@@ -36,7 +36,7 @@ for (x in seq_along(states)) {
 
   peaks_mat <- do.call(rbind, peaks_list2)
   peaks_df <- as.data.frame(peaks_mat)
-  saveRDS(peaks_df, paste0("data-raw/peaks_df_", states[x], ".RDS"))
+  saveRDS(peaks_df, paste0("data-raw/peaks_df_", states[x], "2.RDS"))
 }
 
 ## peak detection function

@@ -4,13 +4,14 @@
 
 # read in max hourly measurements
 states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WY", "AZ", "WA")
-usgs_fs_cl <- readRDS("data-raw/usgs_fs_comp4.RDS")
+usgs_fs_cl <- readRDS("data-raw/usgs_fs_init.RDS")
 data.table::setDT(usgs_fs_cl)
+## following two steps already done in usgs_fs_init.RDS
 # usgs_fs_cl <- usgs_fs_cl[, est := is.na(discharge)]
-usgs_fs_cl <- usgs_fs_cl[, minpeak := rep(0, length = nrow(usgs_fs_cl))]
+# usgs_fs_cl <- usgs_fs_cl[, minpeak := rep(0, length = nrow(usgs_fs_cl))]
 
+# get overall median for existing thresholds
 prop_est_lst2 <- vector("list", length = length(states))
-props_lst2 <- vector("list", length = length(states))
 for (i in seq_along(states)) {
   rhv_tot <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_", states[i], ".RDS"))
   data.table::setDT(rhv_tot)
@@ -40,7 +41,12 @@ med <- median(ex_props, na.rm = TRUE)
 
 # use median proportion to estimate flood stages for other stations and add
 # minpeaks props
+props_lst2 <- vector("list", length = length(states))
 for (i in seq_along(states)) {
+  rhv_tot <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_", states[i], ".RDS"))
+  data.table::setDT(rhv_tot)
+  usgs_fs <- usgs_fs_cl[state == states[i]]
+
   vec <- c()
   for (k in seq_along(usgs_fs$discharge)) {
     sub <- rhv_tot[id == formatC(usgs_fs$site_no[k],
@@ -70,7 +76,7 @@ for (i in seq_along(states)) {
   props_lst2[[i]] <- props
   usgs_fs_cl[state == states[i]]$minpeak <- props
 }
-}
+
 
 # just need to do it for WA and AZ and then we'll have everything and know which
 # ones need to be redone
