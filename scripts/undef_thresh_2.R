@@ -1,9 +1,8 @@
-## this script has the same goals as undef_thresh_1.R but it uses the median
-## proportion for all existing flood stages rather than applying them
+## this script ha all existing flood stages rather than applying them
 ## individually by state
 
-# read in max hourly measurements
-states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WY", "AZ", "WA")
+# read in max hourly mes the same goals as undef_thresh_1.R but it uses the median
+## proportion forasurements
 usgs_fs_cl <- readRDS("data-raw/usgs_fs_init.RDS")
 data.table::setDT(usgs_fs_cl)
 ## following two steps already done in usgs_fs_init.RDS
@@ -45,9 +44,10 @@ usgs_fs_miss <- usgs_fs_cl[is.na(discharge)]
 
 props_lst2 <- vector("list", length = length(states))
 for (i in seq_along(states)) {
-  rhv_tot <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_", states[i], ".RDS"))
+  #rhv_tot <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_", states[i], ".RDS"))
+  rhv_tot <- readRDS(paste0("data-raw/rhv_miss/rhv_miss_", states[i], ".RDS"))
   data.table::setDT(rhv_tot)
-  usgs_fs <- usgs_fs_cl[state == states[i]]
+  usgs_fs <- usgs_fs_miss[state == states[i]]
 
   vec <- c()
   for (k in seq_along(usgs_fs$discharge)) {
@@ -64,9 +64,9 @@ for (i in seq_along(states)) {
     }
   }
   vec[vec < 0] <- NA
-  usgs_fs_cl[state == states[i]]$discharge <- vec
+  usgs_fs_miss[state == states[i]]$discharge <- vec
 
-  usgs_fs <- usgs_fs_cl[state == states[i]]
+  usgs_fs <- usgs_fs_miss[state == states[i]]
   props <- c()
   for (x in seq_along(usgs_fs$site_no)) {
     sub <- rhv_tot[id == formatC(usgs_fs$site_no[x],
@@ -76,13 +76,13 @@ for (i in seq_along(states)) {
     props[x] <- usgs_fs$discharge[x] / max(sub$max_flow)
   }
   props_lst2[[i]] <- props
-  usgs_fs_cl[state == states[i]]$minpeak <- props
+  usgs_fs_miss[state == states[i]]$minpeak <- props
 }
 
 
 # just need to do it for WA and AZ and then we'll have everything and know which
 # ones need to be redone
-saveRDS(usgs_fs_cl, "data-raw/usgs_fs_comp4.RDS")
+saveRDS(usgs_fs_cl, "data-raw/usgs_fs_alm.RDS")
 
 # retry by looking at existing proportions
 states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WY", "WA", "AZ")
