@@ -1,5 +1,5 @@
 # get peaks for all states
-states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "UT", "WY", "WA", "AZ")
+states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "WY", "WA", "AZ")
 usgs_fs_cl <- readRDS("data-raw/usgs_fs_comp4.RDS")
 data.table::setDT(usgs_fs_cl)
 
@@ -64,4 +64,5 @@ peakdf <- function(df, minpeak) {
 #   type
 # }
 
-
+y <- readRDS("data-raw/peaks_df_CA2.RDS")
+unique(y$id)

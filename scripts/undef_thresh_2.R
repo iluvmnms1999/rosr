@@ -41,6 +41,8 @@ med <- median(ex_props, na.rm = TRUE)
 
 # use median proportion to estimate flood stages for other stations and add
 # minpeaks props
+usgs_fs_miss <- usgs_fs_cl[is.na(discharge)]
+
 props_lst2 <- vector("list", length = length(states))
 for (i in seq_along(states)) {
   rhv_tot <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_", states[i], ".RDS"))
@@ -138,3 +140,8 @@ peak_plot <- function(x, beg_date, end_date) {
 }
 
 peak_plot(df, "2014-01-01", "2014-03-01")
+
+
+
+
+
