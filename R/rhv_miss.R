@@ -201,3 +201,8 @@ miss_ut <- readRDS("data-raw/rhv_miss/rhv_miss_UT.RDS")
 miss_wy <- readRDS("data-raw/rhv_miss/rhv_miss_WY.RDS")
 miss_wa <- readRDS("data-raw/rhv_miss/rhv_miss_WA.RDS")
 miss_az <- readRDS("data-raw/rhv_miss/rhv_miss_AZ.RDS")
+
+tot <- rbind(miss_ca, miss_co, miss_id, miss_mt, miss_nm, miss_nv, miss_or,
+             miss_wy, miss_wa, miss_az)
+
+length(unique(tot$id)) #125 stations reported

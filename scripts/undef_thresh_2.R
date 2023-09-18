@@ -1,8 +1,9 @@
-## this script ha all existing flood stages rather than applying them
+## this script has the same goals as undef_thresh_1.R but it uses the median
+## proportion for all existing flood stages rather than applying them
 ## individually by state
 
-# read in max hourly mes the same goals as undef_thresh_1.R but it uses the median
-## proportion forasurements
+# read in max hourly measurements
+states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "WY", "AZ", "WA", "UT")
 usgs_fs_cl <- readRDS("data-raw/usgs_fs_init.RDS")
 data.table::setDT(usgs_fs_cl)
 ## following two steps already done in usgs_fs_init.RDS
@@ -40,6 +41,9 @@ med <- median(ex_props, na.rm = TRUE)
 
 # use median proportion to estimate flood stages for other stations and add
 # minpeaks props
+states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "WY", "AZ", "WA")
+usgs_fs_corrmed <- readRDS("data-raw/usgs_fs/usgs_fs_corrmed.RDS")
+data.table::setDT(usgs_fs_corrmed)
 usgs_fs_miss <- usgs_fs_cl[is.na(discharge)]
 
 props_lst2 <- vector("list", length = length(states))
@@ -78,6 +82,12 @@ for (i in seq_along(states)) {
   props_lst2[[i]] <- props
   usgs_fs_miss[state == states[i]]$minpeak <- props
 }
+
+usgs_fs_found <- usgs_fs_miss[!is.na(discharge)]
+
+
+
+
 
 
 # just need to do it for WA and AZ and then we'll have everything and know which
