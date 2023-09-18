@@ -35,3 +35,52 @@ for (i in seq_along(states)) {
   saveRDS(snotel, paste0("data-raw/snotel/snotel_fin_", states[i], ".RDS"))
 }
 
+
+
+## check things out and figure out if there's a better way to download
+az <- readRDS("data-raw/snotel/snotel_fin_AZ.RDS")
+ca <- readRDS("data-raw/snotel/snotel_fin_CA.RDS")
+co <- readRDS("data-raw/snotel/snotel_fin_CO.RDS")
+id <- readRDS("data-raw/snotel/snotel_fin_ID.RDS")
+mt <- readRDS("data-raw/snotel/snotel_fin_MT.RDS")
+nm <- readRDS("data-raw/snotel/snotel_fin_NM.RDS")
+nv <- readRDS("data-raw/snotel/snotel_fin_NV.RDS")
+or <- readRDS("data-raw/snotel/snotel_fin_OR.RDS")
+ut <- readRDS("data-raw/snotel/snotel_fin_UT.RDS")
+wa <- readRDS("data-raw/snotel/snotel_fin_WA.RDS")
+wy <- readRDS("data-raw/snotel/snotel_fin_WY.RDS")
+
+cols <- c("id", "date", "air_temperature_observed_degc_start_of_day_values",
+          "precipitation_increment_mm", "snow_depth_cm_start_of_day_values",
+          "snow_water_equivalent_mm_start_of_day_values",
+          "soil_moisture_percent_2in_pct_start_of_day_values",
+          "soil_moisture_percent_8in_pct_start_of_day_values",
+          "soil_moisture_percent_20in_pct_start_of_day_values"
+          )
+
+az2 <- az %>%
+  select(all_of(cols))
+ca2 <- ca %>%
+  select(all_of(cols))
+co2 <- co %>%
+  select(all_of(cols))
+id2 <- id %>%
+  select(all_of(cols))
+mt2 <- mt %>%
+  select(all_of(cols))
+nm2 <- nm %>%
+  select(all_of(cols))
+nv2 <- nv %>%
+  select(all_of(cols))
+or2 <- or %>%
+  select(all_of(cols))
+ut2 <- ut %>%
+  select(all_of(cols))
+wa2 <- wa %>%
+  select(all_of(cols))
+wy2 <- wy %>%
+  select(all_of(cols))
+
+readRDS(az2)
+
+
