@@ -84,3 +84,14 @@ wy2 <- wy %>%
 readRDS(az2)
 
 
+
+
+
+w <- c(6, 2, 2)
+b <- c(-5, 3)
+x1 <- c(0, 0, 0)
+x2 <- c(0, 0, 1)
+x3 <- c(0, 1, 0)
+
+# output for sigma_1
+for
