@@ -38,17 +38,17 @@ for (i in seq_along(states)) {
 
 
 ## check things out and figure out if there's a better way to download
-az <- readRDS("data-raw/snotel/snotel_fin_AZ.RDS")
-ca <- readRDS("data-raw/snotel/snotel_fin_CA.RDS")
-co <- readRDS("data-raw/snotel/snotel_fin_CO.RDS")
-id <- readRDS("data-raw/snotel/snotel_fin_ID.RDS")
-mt <- readRDS("data-raw/snotel/snotel_fin_MT.RDS")
-nm <- readRDS("data-raw/snotel/snotel_fin_NM.RDS")
-nv <- readRDS("data-raw/snotel/snotel_fin_NV.RDS")
-or <- readRDS("data-raw/snotel/snotel_fin_OR.RDS")
-ut <- readRDS("data-raw/snotel/snotel_fin_UT.RDS")
-wa <- readRDS("data-raw/snotel/snotel_fin_WA.RDS")
-wy <- readRDS("data-raw/snotel/snotel_fin_WY.RDS")
+az <- readRDS("data-raw/snotel/snotel_fin_AZ2.RDS")
+ca <- readRDS("data-raw/snotel/snotel_fin_CA2.RDS")
+co <- readRDS("data-raw/snotel/snotel_fin_CO2.RDS")
+id <- readRDS("data-raw/snotel/snotel_fin_ID2.RDS")
+mt <- readRDS("data-raw/snotel/snotel_fin_MT2.RDS")
+nm <- readRDS("data-raw/snotel/snotel_fin_NM2.RDS")
+nv <- readRDS("data-raw/snotel/snotel_fin_NV2.RDS")
+or <- readRDS("data-raw/snotel/snotel_fin_OR2.RDS")
+ut <- readRDS("data-raw/snotel/snotel_fin_UT2.RDS")
+wa <- readRDS("data-raw/snotel/snotel_fin_WA2.RDS")
+wy <- readRDS("data-raw/snotel/snotel_fin_WY2.RDS")
 
 cols <- c("id", "date", "air_temperature_observed_degc_start_of_day_values",
           "precipitation_increment_mm", "snow_depth_cm_start_of_day_values",
