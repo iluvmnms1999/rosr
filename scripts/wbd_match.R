@@ -1,44 +1,62 @@
-library(sf)
-library(tidyverse)
-library(ggmap)
+# library(sf)
+# library(tidyverse)
+# library(ggmap)
 
-# finding points within sf polygons
-# https://mattherman.info/blog/point-in-poly/
-
-# read in huc8 shapefile
-az8 <- sf::st_read(
-  dsn = "data-raw/wbd/az_huc8",
-  layer = "wbdhu8_a_az"
-)
-
-# read in data with ids/states for usgs and snotel stations
 states <- c("az", "ca", "co", "id", "mt", "nm", "nv", "or", "ut", "wa", "wy")
-usgs <- readRDS("data-raw/usgs_fs/usgs_fs_alm.RDS")
-usgs <- usgs[usgs$state %in% toupper(states),]
+usgs_full <- readRDS("data-raw/usgs_fs/usgs_fs_alm.RDS")
+data.table::setDT(usgs_full)
+# add empty column for huc number to go in
+usgs_huc <- usgs_full[, huc8 := rep("NA", length = nrow(usgs_full))]
 
-snotel <- read.csv("data-raw/snotel_id.csv", header = TRUE)
-snotel <- snotel[snotel$state %in% toupper(states),]
+for (i in seq_along(states)) {
+  # read in huc8 shapefile
+  temp <- sf::st_read(
+    dsn = paste0("data-raw/wbd/", states[i], "_huc8"),
+    layer = paste0("wbdhu8_a_", states[i])
+  )
+  temp1 <- sf::st_make_valid(temp)
 
-## USGS - huc8
-# no data for 10309010
-# all these guys have same huc8 (16050201) and are in wb #62 - upper carson
-usgs_sf <- sf::st_as_sf(usgs, coords = c("dec_long_va", "dec_lat_va"), crs = "NAD83",
-                    remove = FALSE)
-usgs_lst <- sf::st_intersects(usgs_sf, az8)
+  # subset usgs file on specific state
+  usgs <- usgs_full[usgs_full$state == toupper(states[i]),]
 
-## SNOTEL - huc12
-snotel_sf <- st_as_sf(snotel, coords = c("longitude", "latitude"),
-                      crs = "NAD83", remove = FALSE)
-snotel_ref <- snotel_sf[regexpr(snotel_sf$huc,
-                                pattern = "^16050201[[:alnum:]]+$") > 0, ]
-snotel_lst <- st_intersects(snotel_ref, ca_nv10)
+  # find which huc usgs station is in
+  usgs_sf <- sf::st_as_sf(usgs, coords = c("dec_long_va", "dec_lat_va"),
+                          crs = "NAD83", remove = FALSE)
+  huc_lst <- sf::st_intersects(usgs_sf, temp1)
+  huc_ind <- unlist(huc_lst)
+  huc_vec <- temp1[huc_ind, 11]
+  usgs_huc[state == toupper(states[i])]$huc8 <- huc_vec$huc8
+}
+# saveRDS(usgs_huc, "data-raw/usgs_fs/usgs_huc.RDS")
 
-## SHP FILE
-nev_shp <- nev10$geometry[nev10$huc8 == 16050201]
-ca_nevhucs10 <- ca_nv10[c(6, 328, 480, 1204),]
-nev8[62,]
+## Get hucs for SNOTEL
+states <- c("az", "ca", "co", "id", "mt", "nm", "nv", "or", "ut", "wa", "wy")
+snotel_full <- read.csv("data-raw/snotel_id.csv", header = TRUE)
+data.table::setDT(snotel_full)
+snotel_huc <- snotel_full[, huc8 := rep("NA", length = nrow(snotel_full))]
 
-head(ca_nevhucs10)
+for (i in seq_along(states)) {
+  # read in huc8 shapefile
+  temp <- sf::st_read(
+    dsn = paste0("data-raw/wbd/", states[i], "_huc8"),
+    layer = paste0("wbdhu8_a_", states[i])
+  )
+  temp1 <- sf::st_make_valid(temp)
+
+  # subset usgs file on specific state
+  snotel <- snotel_full[snotel_full$state == toupper(states[i]),]
+
+  # find which huc usgs station is in
+  snotel_sf <- sf::st_as_sf(snotel, coords = c("lon", "lat"),
+                          crs = "NAD83", remove = FALSE)
+  huc_lst <- sf::st_intersects(snotel_sf, temp1)
+  huc_ind <- unlist(huc_lst)
+  huc_vec <- temp1[huc_ind, 11]
+  snotel_huc[state == toupper(states[i])]$huc8 <- huc_vec$huc8
+}
+snotel_huc1 <- snotel_huc[snotel_huc$state %in% toupper(states),]
+
+saveRDS(snotel_huc1, "data-raw/snotel/snotel_huc.RDS")
 
 ## mapping for verification
 # mapping help: https://waterdata.usgs.gov/blog/beyond-basic-mapping/
