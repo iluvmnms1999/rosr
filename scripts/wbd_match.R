@@ -82,3 +82,27 @@ saveRDS(snotel_huc1, "data-raw/snotel/snotel_huc.RDS")
 #   geom_text(data = usgs_ref,
 #             aes(label = site_num, x = longitude, y = latitude),
 #             hjust = 0, size = 2.5, nudge_x = 0.02, col = "gray48")
+
+# check usgs hucs for accuracy
+usgs <- read.csv("data-raw/usgs_hucs_web.csv", header = TRUE)
+usgs <- usgs[, 2:3]
+colnames(usgs) <- c("site_no", "web_huc8")
+data.table::setDT(usgs)
+
+usgs_og <- readRDS("data-raw/usgs_fs/usgs_huc.RDS")
+data.table::setDT(usgs_og)
+
+usgs_nodup <- unique(usgs, by = "site_no")
+
+usgs_comb <- dplyr::left_join(usgs_og, usgs_nodup, by = c("site_no"))
+
+sum(is.na(usgs_comb$web_huc8))
+
+# make sure usgs hucs line up
+vec <- c()
+for (i in seq_along(usgs_comb$huc8)) {
+  vec[i] <- usgs_comb$huc8[i] == as.character(usgs_comb$web_huc8[i])
+}
+
+nrow(usgs_comb[which(vec == FALSE),]) # 37 hucs don't agree -- 10 are NA's
+

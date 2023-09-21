@@ -26,11 +26,11 @@ states <- c("CO", "ID", "MT", "NM", "NV", "OR", "WY", "WA", "AZ", "UT")
 for (i in seq_along(states)) {
   stations <- snotel_id[snotel_id$state == states[i]]$site_vec
   snotel <- download_snotel(freq = "daily",
-                               destpath = paste0("data-raw/snotel/", states[i],
-                                                 "_snotel"),
-                               sites = stations,
-                               begin_date = as.Date("1980-01-02"),
-                               end_date = as.Date("2023-09-07")
+                            destpath = paste0("data-raw/snotel/", states[i],
+                                              "_snotel"),
+                            sites = stations,
+                            begin_date = as.Date("1980-01-02"),
+                            end_date = as.Date("2023-09-07")
   )
   saveRDS(snotel, paste0("data-raw/snotel/snotel_fin_", states[i], ".RDS"))
 }
@@ -56,7 +56,7 @@ cols <- c("id", "date", "air_temperature_observed_degc_start_of_day_values",
           "soil_moisture_percent_2in_pct_start_of_day_values",
           "soil_moisture_percent_8in_pct_start_of_day_values",
           "soil_moisture_percent_20in_pct_start_of_day_values"
-          )
+)
 
 az2 <- az %>%
   select(all_of(cols))
@@ -83,3 +83,13 @@ wy2 <- wy %>%
 
 readRDS(az2)
 
+# make sure snotel hucs line up
+snotel <- readRDS("data-raw/snotel/snotel_huc.RDS")
+head(snotel)
+
+vec <- c()
+for (i in seq_along(snotel$huc8)) {
+  vec[i] <- grepl(snotel$huc8[i], snotel$huc[i])
+}
+
+nrow(snotel[which(vec == FALSE),]) # 48 hucs don't agree
