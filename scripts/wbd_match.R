@@ -1,3 +1,5 @@
+## matching up hucs to usgs and snotel stations using the wbd
+
 # library(sf)
 # library(tidyverse)
 # library(ggmap)
@@ -62,21 +64,21 @@ saveRDS(snotel_huc1, "data-raw/snotel/snotel_huc.RDS")
 # mapping help: https://waterdata.usgs.gov/blog/beyond-basic-mapping/
 # double check watershed region:
 #     https://water.usgs.gov/wsc/cat/16050201.html#.html
-library(ggmap)
-# huc8 map
-ggmap::register_google(key = "AIzaSyBOLz3Omb-9HWFlspMDoCLo652IzITbwRY")
-bbox <- setNames(st_bbox(nev8$geometry[nev8$huc8 == 16050201]),
-                 c("left", "bottom", "right", "top"))
-basemap_streets <- get_map(maptype = "roadmap", location = bbox, zoom = 9)
-street_map <- ggmap(basemap_streets)
-
-print(street_map)
-
-street_map + geom_sf(data = nev_shp,
-                     inherit.aes = FALSE,
-                     color = "black", fill = NA) +
-  #geom_sf(data = snotel_ref, inherit.aes = FALSE, color = "blue") +
-  geom_sf(data = usgs_ref, inherit.aes = FALSE, color = "red") +
-  geom_text(data = usgs_ref,
-            aes(label = site_num, x = longitude, y = latitude),
-            hjust = 0, size = 2.5, nudge_x = 0.02, col = "gray48")
+# library(ggmap)
+# # huc8 map
+# ggmap::register_google(key = "AIzaSyBOLz3Omb-9HWFlspMDoCLo652IzITbwRY")
+# bbox <- setNames(st_bbox(nev8$geometry[nev8$huc8 == 16050201]),
+#                  c("left", "bottom", "right", "top"))
+# basemap_streets <- get_map(maptype = "roadmap", location = bbox, zoom = 9)
+# street_map <- ggmap(basemap_streets)
+#
+# print(street_map)
+#
+# street_map + geom_sf(data = nev_shp,
+#                      inherit.aes = FALSE,
+#                      color = "black", fill = NA) +
+#   #geom_sf(data = snotel_ref, inherit.aes = FALSE, color = "blue") +
+#   geom_sf(data = usgs_ref, inherit.aes = FALSE, color = "red") +
+#   geom_text(data = usgs_ref,
+#             aes(label = site_num, x = longitude, y = latitude),
+#             hjust = 0, size = 2.5, nudge_x = 0.02, col = "gray48")
