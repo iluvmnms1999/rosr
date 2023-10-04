@@ -1,8 +1,5 @@
 download_prism <- function(sp_res = "4km", # or 800m
-                           data = "ppt", # c("ppt", c("tmin", "tmax", "tmean"),
-                           # data = c("tdmean", "vpdmin", "vpdmax", "ppt")
-                           # data = c("ppt","tmin", "tmax", "tmean",
-                           #          "tdmean", "vpdmin", "vpdmax")
+                           data = "ppt", # c("ppt", c("tmin", "tmax", "tmean")
                            start_date = as.Date("2017-04-01"),
                            end_date = as.Date("2017-08-03"),
                            t_res = "monthly", # monthly, yearly
@@ -38,6 +35,7 @@ download_prism <- function(sp_res = "4km", # or 800m
 
   # For loops depend on time resolution
   if (t_res == "daily") {
+    time_resolution <- "day"
     tdate <- seq(start_date, end_date, by = "day")
     years <- gsub("-", "", substring(tdate, 1, 4))
     tdate <- gsub("-", "", tdate)
