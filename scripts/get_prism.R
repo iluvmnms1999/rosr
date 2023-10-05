@@ -6,7 +6,7 @@ library(utils)
 library(R.utils)
 source("R/download_prism_ind.R")
 
-years <- seq(1983, 2022, 1)
+years <- seq(1987, 2022, 1)
 
 # save prism data as rasters in specified folders
 beg <- Sys.time()
@@ -23,27 +23,6 @@ for (i in seq_along(years)) {
 }
 end <- Sys.time()
 end - beg
-
-
-prism_data(years)
-
-## try at Rcpp - FAIL
-# cppFunction('NULL prism_data_cpp(NumericVector dates) {
-#   Environment rsnodas_env = Environment::namespace_env("rsnodas2");
-#   Function fun_dp_in_cpp = rsnodas_env["download_prism"];
-#
-#   int n = dates.size();
-#   for(int i = 0; i < n; ++i) {
-#     fun_dp_in_cpp(
-#       sp_res = "4km",
-#       data = "ppt",
-#       start_date = as.Date(paste0(as.character(dates[i]), "-10-01")),
-#       end_date = as.Date(paste0(as.character(dates[i + 1]), "-09-30")),
-#       t_res = "daily",
-#       out_dir = paste0(getwd(), "/data/prism/", as.character(dates[i]))
-#     )
-#   }
-# }')
 
 # read prism data as raster
 

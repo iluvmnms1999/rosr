@@ -40,7 +40,7 @@ download_prism <- function(sp_res = "4km", # or 800m
     years <- gsub("-", "", substring(tdate, 1, 4))
     tdate <- gsub("-", "", tdate)
   } else if (t_res == "monthly") {
-    time_resolution <- "day"
+    time_resolution <- "month"
     # } else if (t_res == "monthly") {
     tdate <- seq(start_date, end_date, by = "month")
     years <- gsub("-", "", substring(tdate, 1, 4))
@@ -48,12 +48,11 @@ download_prism <- function(sp_res = "4km", # or 800m
     # remove the day argument and get rid of the "-" and return a 6 character
     tdate <- gsub("-", "", substring(tdate, 1, 7))
   } else if (t_res == "yearly") {
-    time_resolution <- "month"
+    time_resolution <- "year"
     # } else if (t_res == "yearly") {
     tdate <- seq(start_date, end_date, by = "year")
     years <- gsub("-", "", substring(tdate, 1, 4))
     tdate <- unique(gsub("-", "", substring(tdate, 1, 4)))
-    time_resolution <- "year"
   }
 
   tsource <- c()
@@ -88,18 +87,16 @@ download_prism <- function(sp_res = "4km", # or 800m
 
   # go through and download, unzip and remove the zipped file
   for (i in seq_len(length(tsource))) {
-    print(paste("Downloading day", i, "of", length(tsource)))
-    for (i in 1:length(tsource)) {
-      print(paste("Downloading", time_resolution, i, "of", length(tsource)))
-      try(utils::download.file(tsource[i],
-                               final_location[i],
-                               mode = "wb"
-      ))
-      try(utils::unzip(final_location[i],
-                       exdir = destination[i]
-      ))
-      try(file.remove(final_location[i]))
-      Sys.sleep(1)
-    }
+    print(paste("Downloading", time_resolution, i, "of", length(tsource)))
+    try(utils::download.file(tsource[i],
+                             final_location[i],
+                             mode = "wb"
+    ))
+    try(utils::unzip(final_location[i],
+                     exdir = destination[i]
+    ))
+    try(file.remove(final_location[i]))
+    Sys.sleep(1)
   }
 }
+
