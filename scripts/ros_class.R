@@ -1,13 +1,31 @@
-## classify peaks as ROS or not
+#### classify ROS peaks
+library(data.table)
 
+## import necessary data
 usgs_huc <- readRDS("data-raw/usgs_fs/usgs_huc.RDS")
 snotel_huc <- readRDS("data-raw/snotel/snotel_huc.RDS")
 peaks <- readRDS("data-raw/peaks_fin/peaks_tot.RDS")
 
-## get melt
+# add hucs onto peaks
+peaks <- peaks[, huc := rep(0, nrow(peaks))]
+for (i in seq_along(usgs_huc$site_no)) {
+  # add huc variable to peak data
+  peaks[peaks$id == formatC(usgs_huc$site_no[i],
+                            width = 8,
+                            format = "d",
+                            flag = "0")]$huc <- rep(usgs_huc$huc8[i],
+                                                    times = nrow(peaks[peaks$id == formatC(usgs_huc$site_no[i],
+                                                                                                               width = 8,
+                                                                                                               format = "d",
+                                                                                                               flag = "0")]))
+  }
+
+### GET MELT ####
+## get melt using prism prec
 swe_prec <- read.csv("data-raw/ros_class/swe_prec.csv", header = TRUE)
 
 # sort data frame by station
+# shift prism values up one to match with snotel
 swe_prec_ord <- swe_prec[order(swe_prec$id),]
 swe_prec_ord2 <- swe_prec_ord %>%
   group_by(id) %>%
@@ -21,53 +39,76 @@ swe_prec_diff2 <- swe_prec_ord2 %>%
 swe_prec_diff2$melt[which(swe_prec_diff2$melt < 0)] <- 0
 swe_prec_diff2 <- ungroup(swe_prec_diff2)
 
+## get melt using snotel prec
+snotel <- readRDS("data-raw/snotel/snotel_clean_AZ.RDS")
+data.table::setDT(snotel)
+# add empty huc var
+snotel <- snotel[, huc := rep(0, nrow(snotel))]
+snotel <- snotel[, n_stat := rep(0, nrow(snotel))]
+
+# add huc variable
+station_num <- stringr::str_extract(unique(snotel$id), "(\\d+)")
+counts <- snotel_huc[state == "AZ", length(unique(site_name)), by = huc8]
+for (i in seq_along(unique(snotel$id))) {
+  # get vector of hucs for each unique snotel station in state
+  huc <- snotel_huc[station_num[i] == stringr::str_extract(snotel_huc$site_name, "(\\d+)")]$huc8
+
+  # add huc variable to snotel measurement data
+  snotel[stringr::str_extract(id, "(\\d+)") == station_num[i]]$huc <- rep(huc, times = nrow(snotel[stringr::str_extract(id, "(\\d+)") == station_num[i]]))
+  snotel[stringr::str_extract(id, "(\\d+)") == station_num[i]]$n_stat <- rep(counts[counts$huc8 == huc]$V1, times = nrow(snotel[stringr::str_extract(id, "(\\d+)") == station_num[i]]))
+
+}
+
+# group by id and add melt variable as function of change in swe and prec
+snotel_melt <- snotel[, melt := swe + prec - shift(swe, type = "lead"), by = id]
+
+# make negative melt values 0
+snotel_melt$melt[which(snotel_melt$melt < 0)] <- 0
+
+# extract numeric id
+# snotel_melt$id <- as.numeric(substr(formatC(snotel_melt$id,
+#                                             width = 4,
+#                                             format = "d",
+#                                             flag = "0"
+# ), 1, 4
+# )
+# )
+
 #### Temp-based (P >= 10mm, SWE >= 10mm, T >= 1 [celsius]) ####
-#### Split temp-based (P >= 10mm, SWE >= 10mm, T >= 2.6 | T >= 1.2 if elev <=2000
-#   or >2000 respectively) -- do we want to use this? ####
+#### Split temp-based (P >= 10mm, SWE >= 10mm, T >= 2.6 | T >= 1.2 if elev <=2000 or >2000 respectively) ####
 #### PRISM: SWE-based (SWE >= 10mm, p >= 10mm, SWE/(P+SWE) >= 0.2) ####
 #### SNOTEL: SWE-based ####
 #### PRISM: Melt-based (SWE >= 10mm, p >= 10mm, melt/(P+melt) >= 0.2) ####
 #### SNOTEL: Melt-based ####
-snotel_melt <- snotel_ddf %>%
-  select(id, date,
-         precipitation_increment_mm,
-         snow_water_equivalent_mm_start_of_day_values) %>%
-  dplyr::rename(precip_snotel = precipitation_increment_mm,
-                swe_snotel = snow_water_equivalent_mm_start_of_day_values) %>%
-  mutate(sn_melt = swe_snotel + precip_snotel - lead(swe_snotel))
+ros_melt_snotel <- snotel_melt[swe >= 10 & prec >= 10 & melt/(melt + prec) >= 0.2]
 
-# replace id with numeric in snotel_ddf and order by id
-snotel_melt$id <- as.numeric(substr(formatC(snotel_melt$id,
-                                            width = 4,
-                                            format = "d",
-                                            flag = "0"
-), 1, 4
-)
-)
-
-ros_days3 <- snotel_melt %>%
-  filter(swe_snotel >= 10 &
-           precip_snotel >= 10 &
-           sn_melt / (sn_melt + precip_snotel) >= 0.2)
-
-dup_ros_days4 <- ros_days3 %>% dplyr::group_by(date) %>% dplyr::summarise(length(date))
-intervalsv4 <- vector("list", length = length(dup_ros_days4$date))
-for (i in seq_along(dup_ros_days4$date)) {
-  int <- seq(as.POSIXct(dup_ros_days4$date[i], tz = "US/Pacific"),
+ros_days <- ros_melt_snotel %>% dplyr::group_by(date, huc) %>%
+  dplyr::summarise(l_date = length(date), n_stat = n_stat)
+intervals <- vector("list", length = length(ros_days$date))
+for (i in seq_along(ros_days$date)) {
+  int <- seq(as.POSIXct(ros_days$date[i], tz = "US/Pacific"),
              by = "day", length.out = 7)
-  intervalsv4[[i]] <- int
+  intervals[[i]] <- int
 }
-dup_ros_days4$date_ints <- intervalsv4
-super_ros4 <- dup_ros_days4[dup_ros_days4$`length(date)` / 7 > 0.5, ]
+ros_days$date_ints <- intervals
+super_ros <- ros_days[ros_days$l_date / ros_days$n_stat > 0.5, ]
 
 
-peaks_df100v4 <- peaks_df100
-peaks_df100v4$ros <- ifelse(as.POSIXct(peaks_df100v4$dt,
-                                       format = "%Y-%m-%d", tz = "US/Pacific") %in%
-                              as.POSIXct(unlist(super_ros4$date_ints), format = "%Y-%m-%d",
-                                         tz = "US/Pacific", origin = "1970-01-01"),
+peaks_sub <- peaks[state == "AZ"]
+peaks_sub$ros <- ifelse(as.POSIXct(peaks_sub$dt,
+                                       format = "%Y-%m-%d", tz = "US/Pacific",
+                                   origin = "1970-01-01") %in%
+                              as.POSIXct(unlist(super_ros$date_ints), format = "%Y-%m-%d",
+                                         tz = "US/Pacific", origin = "1970-01-01") &
+                          peaks_sub$huc == super_ros$huc,
                             "ros", "non-ros")
 
+for (i in seq_along(peaks_sub$y)) {
+  temp <- peaks_sub[huc %in% super_ros$huc]
+  if (peaks_sub$huc[i] == super_ros$huc) {
+
+  }
+}
 
 
 
@@ -292,6 +333,9 @@ for (i in seq_along(peaks_df100v4$dt)) {
     peaks_df100v4$ros[i] <- "ros"
   }
 }
+
+
+
 
 
 
