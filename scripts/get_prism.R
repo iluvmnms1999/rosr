@@ -38,7 +38,7 @@ x <- cbind(snotel[,3], date, prism_snotel_crds[, 2])
 
 
 # start prism data extraction here
-states <- c("NV", "CA", "CO", "ID", "MT", "NM", "OR", "UT", "WA", "AZ")
+states <- c("NV", "CA", "CO", "ID", "MT", "NM", "OR", "UT", "WA", "AZ", "WY")
 years <- seq(1983, 2022, 1)
 snotel <- readRDS("data-raw/snotel/snotel_huc.RDS")
 # write extraction function

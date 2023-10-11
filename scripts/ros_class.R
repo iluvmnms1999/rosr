@@ -2,7 +2,7 @@
 library(data.table)
 library(dplyr)
 
-## import necessary data
+#### import/prep necessary data ####
 usgs_huc <- readRDS("data-raw/usgs_fs/usgs_huc.RDS")
 snotel_huc <- readRDS("data-raw/snotel/snotel_huc.RDS")
 peaks <- readRDS("data-raw/peaks_fin/peaks_tot.RDS")
@@ -24,11 +24,179 @@ for (i in seq_along(usgs_huc$site_no)) {
 # subset peaks to just include those in the same hucs as snotel stations
 peaks_match <- peaks[peaks$huc %in% as.numeric(snotel_huc$huc8)]
 
+# add hucs and melt to snotel data for each station (TAKES FOREVER)
+states <- toupper(c("az", "ca", "co", "id", "mt", "nm", "nv", "or", "ut", "wa",
+                    "wy"))
+for (i in seq_along(states)) {
+  snotel <- readRDS(paste0("data-raw/snotel/snotel_clean_", states[i], ".RDS"))
+  # get rid of NA date rows
+  snotel <- snotel[!is.na(date)]
+  # add empty huc var
+  snotel <- snotel[, huc := rep(0, nrow(snotel))]
+  snotel <- snotel[, n_stat := rep(0, nrow(snotel))]
+
+  # add huc variable
+  station_num <- stringr::str_extract(unique(snotel$id), "(\\d+)")
+  counts <- snotel_huc[state == states[i], length(unique(site_name)), by = huc8]
+  for (x in seq_along(unique(snotel$id))) {
+    # get vector of hucs for each unique snotel station in state
+    huc <- snotel_huc[station_num[x] == stringr::str_extract(snotel_huc$site_name,
+                                                             "(\\d+)")]$huc8
+
+    # add huc variable to snotel measurement data
+    snotel[stringr::str_extract(id, "(\\d+)") == station_num[x]]$huc <- rep(huc,
+                                                                            times = nrow(snotel[stringr::str_extract(id, "(\\d+)") == station_num[x]]))
+    snotel[stringr::str_extract(id, "(\\d+)") == station_num[x]]$n_stat <- rep(counts[counts$huc8 == huc]$V1,
+                                                                               times = nrow(snotel[stringr::str_extract(id, "(\\d+)") == station_num[x]]))
+  }
+  snotel_melt <- snotel[, melt := swe + prec - shift(swe, type = "lead"),
+                        by = id]
+
+  # make negative melt values 0
+  snotel_melt$melt[which(snotel_melt$melt < 0)] <- 0
+  saveRDS(snotel_melt, paste0("data-raw/snotel/huc_melt/snotel_hucmelt_",
+                              states[i], ".RDS"))
+}
+
+# add elevation (fp)
+for (i in seq_along(states)) {
+  snotel <- readRDS(paste0("data-raw/snotel/huc_melt/snotel_hucmelt_",
+                           states[i], ".RDS"))
+  snotel <- snotel[, elev := rep(0, nrow(snotel))]
+  station_num <- stringr::str_extract(unique(snotel$id), "(\\d+)")
+  for (x in seq_along(unique(snotel$id))) {
+    elev <- snotel_huc[station_num[x] == stringr::str_extract(snotel_huc$site_name,
+                                                              "(\\d+)")]$elev
+
+    # add huc variable to snotel measurement data
+    snotel[stringr::str_extract(id, "(\\d+)") == station_num[x]]$elev <- rep(elev,
+                                                                             times = nrow(snotel[stringr::str_extract(id, "(\\d+)") == station_num[x]]))
+  }
+  saveRDS(snotel, paste0("data-raw/snotel/huc_melt_elev/snotel_hucmeltelev_", states[i], ".RDS"))
+}
 
 #### Temp-based (P >= 10mm, SWE >= 10mm, T >= 1 [celsius]) ####
+
+## import snotel data and add hucs to it
+states <- toupper(c("az", "ca", "co", "id", "mt", "nm", "nv", "or", "ut", "wa",
+                    "wy"))
+for (i in seq_along(states)) {
+  snotel <- readRDS(paste0("data-raw/snotel/huc_melt/snotel_hucmelt_",
+                           states[i], ".RDS"))
+
+  ros_temp <- snotel[swe >= 10 & prec >= 10 & temp_degc >= 1]
+
+  ros_days <- ros_temp %>% dplyr::group_by(date, huc) %>%
+    dplyr::reframe(l_date = length(date), n_stat = n_stat) %>%
+    filter(n_stat >= 2)
+  intervals <- vector("list", length = length(ros_days$date))
+  for (y in seq_along(ros_days$date)) {
+    int <- seq(as.POSIXct(ros_days$date[y], tz = "US/Pacific"),
+               by = "hour", length.out = 168)
+    intervals[[y]] <- int
+  }
+  ros_days$date_ints <- intervals
+  super_ros <- ros_days[ros_days$l_date / ros_days$n_stat >= 0.5, ]
+
+  peaks_sub <- peaks_match[state == states[i] & peaks_match$huc %in% super_ros$huc]
+  peaks_sub <- peaks_sub[, ros := rep(0, nrow(peaks_sub))]
+  for (z in seq_along(peaks_sub$y)) {
+    temp <- super_ros[super_ros$huc == peaks_sub$huc[z],]
+    peaks_sub$ros[z] <- ifelse(as.POSIXct(peaks_sub$dt[z],
+                                          format = "%Y-%m-%d",
+                                          tz = "US/Pacific") %in%
+                                 as.POSIXct(unlist(temp$date_ints),
+                                            format = "%Y-%m-%d",
+                                            tz = "US/Pacific",
+                                            origin = "1970-01-01"),
+                               "ros", "non-ros")
+  }
+  saveRDS(peaks_sub, paste0("data-raw/ros_class/huc_match/temp/ros_peaks_t_",
+                            states[i], ".RDS"))
+}
+
 #### Split temp-based (P >= 10mm, SWE >= 10mm, T >= 2.6 | T >= 1.2 if elev <=2000 or >2000 respectively) ####
+states <- toupper(c("az", "ca", "co", "id", "mt", "nm", "nv", "or", "ut", "wa",
+                    "wy"))
+for (i in seq_along(states)) {
+  snotel <- readRDS(paste0("data-raw/snotel/huc_melt_elev/snotel_hucmeltelev_",
+                           states[i], ".RDS"))
+
+  ros_temp_split <- snotel[swe >= 10 & prec >= 10 & fifelse(elev > 2000,
+                                                           temp_degc >= 1.2,
+                                                           temp_degc >= 2.6)]
+
+  ros_days <- ros_temp_split %>% dplyr::group_by(date, huc) %>%
+    dplyr::reframe(l_date = length(date), n_stat = n_stat) %>%
+    filter(n_stat >= 2)
+  intervals <- vector("list", length = length(ros_days$date))
+  for (y in seq_along(ros_days$date)) {
+    int <- seq(as.POSIXct(ros_days$date[y], tz = "US/Pacific"),
+               by = "hour", length.out = 168)
+    intervals[[y]] <- int
+  }
+  ros_days$date_ints <- intervals
+  super_ros <- ros_days[ros_days$l_date / ros_days$n_stat >= 0.5, ]
+
+  peaks_sub <- peaks_match[state == states[i] & peaks_match$huc %in% super_ros$huc]
+  peaks_sub <- peaks_sub[, ros := rep(0, nrow(peaks_sub))]
+  for (z in seq_along(peaks_sub$y)) {
+    temp <- super_ros[super_ros$huc == peaks_sub$huc[z],]
+    peaks_sub$ros[z] <- ifelse(as.POSIXct(peaks_sub$dt[z],
+                                          format = "%Y-%m-%d",
+                                          tz = "US/Pacific") %in%
+                                 as.POSIXct(unlist(temp$date_ints),
+                                            format = "%Y-%m-%d",
+                                            tz = "US/Pacific",
+                                            origin = "1970-01-01"),
+                               "ros", "non-ros")
+  }
+  saveRDS(peaks_sub,
+          paste0("data-raw/ros_class/huc_match/temp_split/ros_peaks_ts_",
+                 states[i], ".RDS"))
+}
+
 #### PRISM: SWE-based (SWE >= 10mm, p >= 10mm, SWE/(P+SWE) >= 0.2) ####
 #### SNOTEL: SWE-based ####
+states <- toupper(c("az", "ca", "co", "id", "mt", "nm", "nv", "or", "ut", "wa",
+                    "wy"))
+for (i in seq_along(states)) {
+  snotel <- readRDS(paste0("data-raw/snotel/huc_melt/snotel_hucmelt_",
+                           states[i], ".RDS"))
+
+  ros_swe_snotel <- snotel[swe >= 10 & prec >= 10 & swe/(swe + prec) >= 0.2]
+
+  # add info (variable) for how many of total snotels agree on ros days and only
+  # retain hucs where there are more than two snotel stations
+  ros_days <- ros_swe_snotel %>% dplyr::group_by(date, huc) %>%
+    dplyr::reframe(l_date = length(date), n_stat = n_stat) %>%
+    filter(n_stat >= 2)
+  intervals <- vector("list", length = length(ros_days$date))
+  for (y in seq_along(ros_days$date)) {
+    int <- seq(as.POSIXct(ros_days$date[y], tz = "US/Pacific"),
+               by = "hour", length.out = 168)
+    intervals[[y]] <- int
+  }
+  ros_days$date_ints <- intervals
+  super_ros <- ros_days[ros_days$l_date / ros_days$n_stat >= 0.5, ]
+
+  peaks_sub <- peaks_match[state == states[i] & peaks_match$huc %in% super_ros$huc]
+  peaks_sub <- peaks_sub[, ros := rep(0, nrow(peaks_sub))]
+  for (z in seq_along(peaks_sub$y)) {
+    temp <- super_ros[super_ros$huc == peaks_sub$huc[z],]
+    peaks_sub$ros[z] <- ifelse(as.POSIXct(peaks_sub$dt[z],
+                                          format = "%Y-%m-%d",
+                                          tz = "US/Pacific") %in%
+                                 as.POSIXct(unlist(temp$date_ints),
+                                            format = "%Y-%m-%d",
+                                            tz = "US/Pacific",
+                                            origin = "1970-01-01"),
+                               "ros", "non-ros")
+  }
+  saveRDS(peaks_sub, paste0("data-raw/ros_class/huc_match/swe_snotel/ros_peaks_ss_",
+                            states[i], ".RDS"))
+}
+
 #### PRISM: Melt-based (SWE >= 10mm, p >= 10mm, melt/(P+melt) >= 0.2) ####
 ## get melt using prism prec
 swe_prec <- read.csv("data-raw/ros_class/swe_prec.csv", header = TRUE)
@@ -50,44 +218,13 @@ swe_prec_diff2 <- ungroup(swe_prec_diff2)
 
 #### SNOTEL: Melt-based ####
 ## get melt using snotel prec
-states <- toupper(c("az", "ca", "co", "id", "mt", "nm", "nv", "or", "ut", "wa", "wy"))
+states <- toupper(c("az", "ca", "co", "id", "mt", "nm", "nv", "or", "ut", "wa",
+                    "wy"))
 for (i in seq_along(states)) {
-  snotel <- readRDS(paste0("data-raw/snotel/snotel_clean_", states[i], ".RDS"))
-  # get rid of NA date rows
-  snotel <- snotel[!is.na(date)]
-  # add empty huc var
-  snotel <- snotel[, huc := rep(0, nrow(snotel))]
-  snotel <- snotel[, n_stat := rep(0, nrow(snotel))]
+  snotel <- readRDS(paste0("data-raw/snotel/huc_melt/snotel_hucmelt_",
+                           states[i], ".RDS"))
 
-  # add huc variable
-  station_num <- stringr::str_extract(unique(snotel$id), "(\\d+)")
-  counts <- snotel_huc[state == states[i], length(unique(site_name)), by = huc8]
-  for (i in seq_along(unique(snotel$id))) {
-    # get vector of hucs for each unique snotel station in state
-    huc <- snotel_huc[station_num[i] == stringr::str_extract(snotel_huc$site_name, "(\\d+)")]$huc8
-
-    # add huc variable to snotel measurement data
-    snotel[stringr::str_extract(id, "(\\d+)") == station_num[i]]$huc <- rep(huc, times = nrow(snotel[stringr::str_extract(id, "(\\d+)") == station_num[i]]))
-    snotel[stringr::str_extract(id, "(\\d+)") == station_num[i]]$n_stat <- rep(counts[counts$huc8 == huc]$V1, times = nrow(snotel[stringr::str_extract(id, "(\\d+)") == station_num[i]]))
-
-  }
-
-  # group by id and add melt variable as function of change in swe and prec
-  snotel_melt <- snotel[, melt := swe + prec - shift(swe, type = "lead"), by = id]
-
-  # make negative melt values 0
-  snotel_melt$melt[which(snotel_melt$melt < 0)] <- 0
-
-  # extract numeric id
-  # snotel_melt$id <- as.numeric(substr(formatC(snotel_melt$id,
-  #                                             width = 4,
-  #                                             format = "d",
-  #                                             flag = "0"
-  # ), 1, 4
-  # )
-  # )
-
-  ros_melt_snotel <- snotel_melt[swe >= 10 & prec >= 10 & melt/(melt + prec) >= 0.2]
+  ros_melt_snotel <- snotel[swe >= 10 & prec >= 10 & melt/(melt + prec) >= 0.2]
 
   # add info (variable) for how many of total snotels agree on ros days and only
   # retain hucs where there are more than two snotel stations
@@ -95,29 +232,33 @@ for (i in seq_along(states)) {
     dplyr::reframe(l_date = length(date), n_stat = n_stat) %>%
     filter(n_stat >= 2)
   intervals <- vector("list", length = length(ros_days$date))
-  for (i in seq_along(ros_days$date)) {
-    int <- seq(as.POSIXct(ros_days$date[i], tz = "US/Pacific"),
+  for (y in seq_along(ros_days$date)) {
+    int <- seq(as.POSIXct(ros_days$date[y], tz = "US/Pacific"),
                by = "hour", length.out = 168)
-    intervals[[i]] <- int
+    intervals[[y]] <- int
   }
   ros_days$date_ints <- intervals
   super_ros <- ros_days[ros_days$l_date / ros_days$n_stat >= 0.5, ]
 
   peaks_sub <- peaks_match[state == states[i] & peaks_match$huc %in% super_ros$huc]
   peaks_sub <- peaks_sub[, ros := rep(0, nrow(peaks_sub))]
-  for (i in seq_along(peaks_sub$y)) {
-    temp <- super_ros[super_ros$huc == peaks_sub$huc[i],]
-    peaks_sub$ros[i] <- ifelse(as.POSIXct(peaks_sub$dt[i],
-                                          format = "%Y-%m-%d", tz = "US/Pacific") %in%
-                                 as.POSIXct(unlist(temp$date_ints), format = "%Y-%m-%d",
-                                            tz = "US/Pacific", origin = "1970-01-01"),
+  for (z in seq_along(peaks_sub$y)) {
+    temp <- super_ros[super_ros$huc == peaks_sub$huc[z],]
+    peaks_sub$ros[z] <- ifelse(as.POSIXct(peaks_sub$dt[z],
+                                          format = "%Y-%m-%d",
+                                          tz = "US/Pacific") %in%
+                                 as.POSIXct(unlist(temp$date_ints),
+                                            format = "%Y-%m-%d",
+                                            tz = "US/Pacific",
+                                            origin = "1970-01-01"),
                                "ros", "non-ros")
   }
-  saveRDS(peaks_sub, "data-raw/ros_class/ros_peaks_", states[i], ".RDS")
+  saveRDS(peaks_sub, paste0("data-raw/ros_class/huc_match/melt_snotel/ros_peaks_ms_",
+                            states[i], ".RDS"))
 }
 
 
-## plots
+#### plots ####
 rhv_og <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_CA.RDS"))
 rhv_miss <- readRDS(paste0("data-raw/rhv_miss/rhv_miss_CA.RDS"))
 rhv_tot <- rbind(rhv_og, rhv_miss)
@@ -255,27 +396,7 @@ ros_days <- read.csv("data/snotel_ros_days.csv", header = TRUE)
 
 # TEMP-BASED
 # add elevation to snotel_ddf
-id <- c("1051:CA:SNTL", "1049:CA:SNTL", "1050:CA:SNTL", "633:CA:SNTL",
-        "778:CA:SNTL", "697:CA:SNTL", "462:CA:SNTL")
-elev <- c(8129, 8017, 8557, 8306, 6063, 7736, 8661)
-vec <- vector("list", length = length(id))
-for (i in seq_len(length(id))) {
-  vec[[i]] <- rep(elev[i], times = sum(snotel_ddf$id == id[i]))
-}
-snotel_ddf$elevation <- unlist(vec)
 
-ros_days1 <- snotel_ddf %>%
-  filter(snow_water_equivalent_mm_start_of_day_values >= 10 &
-           ifelse(elevation > 2000,
-                  air_temperature_observed_degc_start_of_day_values >= 1.2,
-                  air_temperature_observed_degc_start_of_day_values >= 2.6) &
-           precipitation_increment_mm >= 10) %>%
-  select(id, date, air_temperature_observed_degc_start_of_day_values,
-         precipitation_increment_mm,
-         snow_water_equivalent_mm_start_of_day_values) %>%
-  dplyr::rename(temp = air_temperature_observed_degc_start_of_day_values,
-                precip = precipitation_increment_mm,
-                swe = snow_water_equivalent_mm_start_of_day_values)
 
 # ros_days2 <- snotel_ddf %>%
 #   filter(snow_water_equivalent_mm_start_of_day_values >= 10 &
