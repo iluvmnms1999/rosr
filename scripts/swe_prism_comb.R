@@ -4,23 +4,14 @@
 # library(lubridate)
 # library(stars)
 # source("R/download_prism_ind.R")
+library(dplyr)
 library(prism)
 
 # organize prism data into friendlier format
-data_all <- list.files(path = paste0(getwd(), "/data/exprism"),  # Identify all CSV files
+data_all <- list.files(path = paste0(getwd(), "/data-raw/prism/exprismcsv"),  # Identify all CSV files
                        pattern = "*.csv", full.names = TRUE) %>%
   lapply(read.csv) %>%                              # Store all files in list
   bind_rows
-
-###### download prism using prism package
-prism::prism_set_dl_dir("data-raw/prism")
-
-get_prism_dailys(
-  type = "ppt",
-  minDate = "1981-10-11",
-  maxDate = "2023-08-30",
-  keepZip = FALSE
-)
 
 # clean up snotel
 snotel_ddf <- download_snotel(freq = "daily",
@@ -48,6 +39,11 @@ swe_snotel_df$id <- as.numeric(substr(formatC(swe_snotel_df$id,
 )
 
 # put both prism and snotel prec amounts in same data frame
+x <- readRDS("data-raw/snotel/huc_melt_elev/snotel_hucmeltelev_AZ.RDS")
+head(data_all)
+class(data_all$date)
+class(x$date)
+
 swe_snotel_df$date <- as.Date(swe_snotel_df$date)
 swe_prec <- left_join(data_all, swe_snotel_df, by = c("id", "date"))
 

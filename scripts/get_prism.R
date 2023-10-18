@@ -9,7 +9,6 @@ source("R/download_prism_ind.R")
 years <- seq(1987, 2022, 1)
 
 # save prism data as rasters in specified folders
-beg <- Sys.time()
 for (i in seq_along(years)) {
   download_prism(
     sp_res = "4km",
@@ -21,25 +20,22 @@ for (i in seq_along(years)) {
     )
   )
 }
-end <- Sys.time()
-end - beg
 
 # read prism data as raster
-
-prism_ppt_19810102 <- terra::rast("data-raw/prism/PRISM_ppt_stable_4kmD2_19810102_bil/PRISM_ppt_stable_4kmD2_19810102_bil.bil")
+prism_ppt_19810102 <- terra::rast("data-raw/prism/1984/PRISM_ppt_stable_4kmD2_19841001_bil.bil")
 
 # read in SNOTEL data frame with station coordinates
 snotel <- readRDS("data-raw/snotel/snotel_huc.RDS")
 
-prism_snotel_crds <- terra::extract(prism_ppt_19810102, snotel[, c(7, 6)])
-date <- rep(19810102, nrow(snotel))
+prism_snotel_crds <- terra::extract(prism_ppt_19810102, as.data.frame(snotel[, c(7, 6)]))
+date <- rep(19841001, nrow(snotel))
 x <- cbind(snotel[,3], date, prism_snotel_crds[, 2])
 
 
 
 # start prism data extraction here
 states <- c("NV", "CA", "CO", "ID", "MT", "NM", "OR", "UT", "WA", "AZ", "WY")
-years <- seq(1983, 2022, 1)
+years <- seq(1984, 2021, 1)
 snotel <- readRDS("data-raw/snotel/snotel_huc.RDS")
 # write extraction function
 prism_extract <- function(years, snotel) {
@@ -66,16 +62,16 @@ prism_extract <- function(years, snotel) {
                                  "_bil.bil")
       )
 
-      prism_snotel_crds <- terra::extract(temp, snotel_crds[, 3:2])
-      date <- rep(dates[j], 7)
-      lst2[[j]] <- data.frame(station, date, prism_snotel_crds[, 2])
+      prism_snotel_crds <- terra::extract(temp, snotel[, c(7, 6)])
+      date <- rep(dates[j], nrow(snotel))
+      lst2[[j]] <- data.frame(snotel[,3], date, prism_snotel_crds[, 2])
     }
     lst1[[i]] <- lst2
   }
   lst1
 }
 
-prism_precip <- prism_extract(years)
+prism_precip <- prism_extract(years, as.data.frame(snotel))
 
 lst3 <- vector("list", length = length(prism_precip))
 for (i in seq_len(length(prism_precip))) {
@@ -83,23 +79,11 @@ for (i in seq_len(length(prism_precip))) {
 }
 
 for (i in seq_len(length(lst3))) {
-  write.csv(lst3[[i]], file = paste0("data/exprism/",
-                                     as.character(years[i]),
-                                     ".csv"), row.names = FALSE)
+  write.csv(lst3[[i]], paste0("data-raw/prism/exprismcsv/", as.character(years[i]), ".csv"))
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
+y <- readRDS("data-raw/prism/exprism/1987.RDS")
 
 
 ## cropping to nv
