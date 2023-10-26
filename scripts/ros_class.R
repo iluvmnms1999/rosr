@@ -5,6 +5,7 @@ library(dplyr)
 #### import/prep necessary data ####
 usgs_huc <- readRDS("data-raw/usgs_fs/usgs_huc.RDS")
 snotel_huc <- readRDS("data-raw/snotel/snotel_huc.RDS")
+base_med <- readRDS("data-raw/peaks_fin/peaks_base_med.RDS")
 peaks <- readRDS("data-raw/peaks_fin/peaks_tot.RDS")
 
 # add hucs to peaks
@@ -77,7 +78,7 @@ for (i in seq_along(states)) {
 
 #### Temp-based (P >= 10mm, SWE >= 10mm, T >= 1 [celsius]) ####
 
-## import snotel data and add hucs to it
+## import snotel data and add hucs to it -- include all USGS stations with at least 1 snotel in huc
 states <- toupper(c("az", "ca", "co", "id", "mt", "nm", "nv", "or", "ut", "wa",
                     "wy"))
 for (i in seq_along(states)) {
@@ -88,7 +89,7 @@ for (i in seq_along(states)) {
 
   ros_days <- ros_temp %>% dplyr::group_by(date, huc) %>%
     dplyr::reframe(l_date = length(date), n_stat = n_stat) %>%
-    filter(n_stat >= 2)
+    filter(n_stat >= 1)
   intervals <- vector("list", length = length(ros_days$date))
   for (y in seq_along(ros_days$date)) {
     int <- seq(as.POSIXct(ros_days$date[y], tz = "US/Pacific"),
@@ -111,11 +112,28 @@ for (i in seq_along(states)) {
                                             origin = "1970-01-01"),
                                "ros", "non-ros")
   }
-  saveRDS(peaks_sub, paste0("data-raw/ros_class/huc_match/temp/ros_peaks_t_",
+  saveRDS(peaks_sub, paste0("data-raw/ros_class/huc_match/temp/ge1snotel/ros_peaks_t_",
                             states[i], ".RDS"))
 }
 
+# add baselines to dfs of peaks
+for (i in seq_along(states)) {
+  file <- readRDS(paste0("data-raw/ros_class/huc_match/temp/ge1snotel/ros_peaks_t_",
+                         states[i], ".RDS"))
+  # add baseflow to all dfs
+  x <- dplyr::left_join(file, base_med, by = c("state", "id", "dt"))
+  # get rid of duplicate peakflow
+  temp <- x[, -7]
+  names(temp)[4] <- "peakflow"
+  temp <- temp[, c(1, 2, 5, 3, 4, 7, 6)]
+  temp
+  saveRDS(temp, paste0("data-raw/ros_class/huc_match/temp/ge1snotel/add_base_med/t_base_",
+                       states[i], ".RDS"))
+}
+
+
 #### Split temp-based (P >= 10mm, SWE >= 10mm, T >= 2.6 | T >= 1.2 if elev <=2000 or >2000 respectively) ####
+# at least 1 snotel in huc
 states <- toupper(c("az", "ca", "co", "id", "mt", "nm", "nv", "or", "ut", "wa",
                     "wy"))
 for (i in seq_along(states)) {
@@ -128,7 +146,7 @@ for (i in seq_along(states)) {
 
   ros_days <- ros_temp_split %>% dplyr::group_by(date, huc) %>%
     dplyr::reframe(l_date = length(date), n_stat = n_stat) %>%
-    filter(n_stat >= 2)
+    filter(n_stat >= 1)
   intervals <- vector("list", length = length(ros_days$date))
   for (y in seq_along(ros_days$date)) {
     int <- seq(as.POSIXct(ros_days$date[y], tz = "US/Pacific"),
@@ -152,11 +170,79 @@ for (i in seq_along(states)) {
                                "ros", "non-ros")
   }
   saveRDS(peaks_sub,
-          paste0("data-raw/ros_class/huc_match/temp_split/ros_peaks_ts_",
+          paste0("data-raw/ros_class/huc_match/temp_split/ge1snotel/ros_peaks_ts_",
                  states[i], ".RDS"))
 }
 
+for (i in seq_along(states)) {
+  file <- readRDS(paste0("data-raw/ros_class/huc_match/temp_split/ge1snotel/ros_peaks_ts_",
+                         states[i], ".RDS"))
+  # add baseflow to all dfs
+  x <- dplyr::left_join(file, base_med, by = c("state", "id", "dt"))
+  # get rid of duplicate peakflow
+  temp <- x[, -7]
+  names(temp)[4] <- "peakflow"
+  temp <- temp[, c(1, 2, 5, 3, 4, 7, 6)]
+  temp
+  saveRDS(temp, paste0("data-raw/ros_class/huc_match/temp_split/ge1snotel/add_base_med/ts_base_",
+                       states[i], ".RDS"))
+}
+
+
 #### PRISM: SWE-based (SWE >= 10mm, p >= 10mm, SWE/(P+SWE) >= 0.2) ####
+states <- toupper(c("az", "ca", "co", "id", "mt", "nm", "nv", "or", "ut", "wa",
+                    "wy"))
+for (i in seq_along(states)) {
+  snotel <- readRDS(paste0("data-raw/prism/snotel_prism_comb/comb_w_prism_",
+                           states[i], ".RDS"))
+
+  ros_swe_snotel <- snotel[swe >= 10 & prec_prism >= 10 & swe/(swe + prec_prism) >= 0.2]
+
+  # add info (variable) for how many of total snotels agree on ros days and only
+  # retain hucs where there are more than two snotel stations
+  ros_days <- ros_swe_snotel %>% dplyr::group_by(date, huc) %>%
+    dplyr::reframe(l_date = length(date), n_stat = n_stat) %>%
+    filter(n_stat >= 2)
+  intervals <- vector("list", length = length(ros_days$date))
+  for (y in seq_along(ros_days$date)) {
+    int <- seq(as.POSIXct(ros_days$date[y], tz = "US/Pacific"),
+               by = "hour", length.out = 168)
+    intervals[[y]] <- int
+  }
+  ros_days$date_ints <- intervals
+  super_ros <- ros_days[ros_days$l_date / ros_days$n_stat >= 0.5, ]
+
+  peaks_sub <- peaks_match[state == states[i] & peaks_match$huc %in% super_ros$huc]
+  peaks_sub <- peaks_sub[, ros := rep(0, nrow(peaks_sub))]
+  for (z in seq_along(peaks_sub$y)) {
+    temp <- super_ros[super_ros$huc == peaks_sub$huc[z],]
+    peaks_sub$ros[z] <- ifelse(as.POSIXct(peaks_sub$dt[z],
+                                          format = "%Y-%m-%d",
+                                          tz = "US/Pacific") %in%
+                                 as.POSIXct(unlist(temp$date_ints),
+                                            format = "%Y-%m-%d",
+                                            tz = "US/Pacific",
+                                            origin = "1970-01-01"),
+                               "ros", "non-ros")
+  }
+  saveRDS(peaks_sub, paste0("data-raw/ros_class/huc_match/swe_prism/ge1snotel/ros_peaks_sp_",
+                            states[i], ".RDS"))
+}
+
+for (i in seq_along(states)) {
+  file <- readRDS(paste0("data-raw/ros_class/huc_match/swe_prism/ge1snotel/ros_peaks_sp_",
+                         states[i], ".RDS"))
+  # add baseflow to all dfs
+  x <- dplyr::left_join(file, base_med, by = c("state", "id", "dt"))
+  # get rid of duplicate peakflow
+  temp <- x[, -7]
+  names(temp)[4] <- "peakflow"
+  temp <- temp[, c(1, 2, 5, 3, 4, 7, 6)]
+  temp
+  saveRDS(temp, paste0("data-raw/ros_class/huc_match/swe_prism/ge1snotel/add_base_med/sp_base_",
+                       states[i], ".RDS"))
+}
+
 #### SNOTEL: SWE-based ####
 states <- toupper(c("az", "ca", "co", "id", "mt", "nm", "nv", "or", "ut", "wa",
                     "wy"))
@@ -193,28 +279,79 @@ for (i in seq_along(states)) {
                                             origin = "1970-01-01"),
                                "ros", "non-ros")
   }
-  saveRDS(peaks_sub, paste0("data-raw/ros_class/huc_match/swe_snotel/ros_peaks_ss_",
+  saveRDS(peaks_sub, paste0("data-raw/ros_class/huc_match/swe_snotel/ge1snotel/ros_peaks_ss_",
                             states[i], ".RDS"))
 }
 
+for (i in seq_along(states)) {
+  file <- readRDS(paste0("data-raw/ros_class/huc_match/swe_snotel/ge1snotel/ros_peaks_ss_",
+                         states[i], ".RDS"))
+  # add baseflow to all dfs
+  x <- dplyr::left_join(file, base_med, by = c("state", "id", "dt"))
+  # get rid of duplicate peakflow
+  temp <- x[, -7]
+  names(temp)[4] <- "peakflow"
+  temp <- temp[, c(1, 2, 5, 3, 4, 7, 6)]
+  temp
+  saveRDS(temp, paste0("data-raw/ros_class/huc_match/swe_snotel/ge1snotel/add_base_med/ss_base_",
+                       states[i], ".RDS"))
+}
+
 #### PRISM: Melt-based (SWE >= 10mm, p >= 10mm, melt/(P+melt) >= 0.2) ####
-## get melt using prism prec
-swe_prec <- read.csv("data-raw/ros_class/swe_prec.csv", header = TRUE)
+states <- toupper(c("az", "ca", "co", "id", "mt", "nm", "nv", "or", "ut", "wa",
+                    "wy"))
+for (i in seq_along(states)) {
+  readRDS(paste0("data-raw/prism/snotel_prism_comb/comb_w_prism_",
+                 states[i], ".RDS"))
 
-# sort data frame by station
-# shift prism values up one to match with snotel
-swe_prec_ord <- swe_prec[order(swe_prec$id),]
-swe_prec_ord2 <- swe_prec_ord %>%
-  group_by(id) %>%
-  mutate(prec_prism = lead(prec_prism))
+  ros_melt_snotel <- snotel[swe >= 10 & prec_prism >= 10 & melt_prism/(melt_prism + prec_prism) >= 0.2]
 
-swe_prec_diff2 <- swe_prec_ord2 %>%
-  group_by(id) %>%
-  mutate(melt = swe_snotel + prec_prism - lead(swe_snotel))
+  # add info (variable) for how many of total snotels agree on ros days and only
+  # retain hucs where there are more than two snotel stations
+  ros_days <- ros_melt_snotel %>% dplyr::group_by(date, huc) %>%
+    dplyr::reframe(l_date = length(date), n_stat = n_stat) %>%
+    filter(n_stat >= 2)
+  intervals <- vector("list", length = length(ros_days$date))
+  for (y in seq_along(ros_days$date)) {
+    int <- seq(as.POSIXct(ros_days$date[y], tz = "US/Pacific"),
+               by = "hour", length.out = 168)
+    intervals[[y]] <- int
+  }
+  ros_days$date_ints <- intervals
+  super_ros <- ros_days[ros_days$l_date / ros_days$n_stat >= 0.5, ]
 
-# make negative melt values 0
-swe_prec_diff2$melt[which(swe_prec_diff2$melt < 0)] <- 0
-swe_prec_diff2 <- ungroup(swe_prec_diff2)
+  peaks_sub <- peaks_match[state == states[i] & peaks_match$huc %in% super_ros$huc]
+  peaks_sub <- peaks_sub[, ros := rep(0, nrow(peaks_sub))]
+  for (z in seq_along(peaks_sub$y)) {
+    temp <- super_ros[super_ros$huc == peaks_sub$huc[z],]
+    peaks_sub$ros[z] <- ifelse(as.POSIXct(peaks_sub$dt[z],
+                                          format = "%Y-%m-%d",
+                                          tz = "US/Pacific") %in%
+                                 as.POSIXct(unlist(temp$date_ints),
+                                            format = "%Y-%m-%d",
+                                            tz = "US/Pacific",
+                                            origin = "1970-01-01"),
+                               "ros", "non-ros")
+  }
+  saveRDS(peaks_sub, paste0("data-raw/ros_class/huc_match/melt_prism/ge1snotel/ros_peaks_ms_",
+                            states[i], ".RDS"))
+}
+
+for (i in seq_along(states)) {
+  file <- readRDS(paste0("data-raw/ros_class/huc_match/melt_prism/ge1snotel/ros_peaks_ms_",
+                         states[i], ".RDS"))
+  # add baseflow to all dfs
+  x <- dplyr::left_join(file, base_med, by = c("state", "id", "dt"))
+  # get rid of duplicate peakflow
+  temp <- x[, -7]
+  names(temp)[4] <- "peakflow"
+  temp <- temp[, c(1, 2, 5, 3, 4, 7, 6)]
+  temp
+  saveRDS(temp, paste0("data-raw/ros_class/huc_match/melt_prism/ge1snotel/add_base_med/ms_base_",
+                       states[i], ".RDS"))
+}
+
+
 
 #### SNOTEL: Melt-based ####
 ## get melt using snotel prec
@@ -253,10 +390,23 @@ for (i in seq_along(states)) {
                                             origin = "1970-01-01"),
                                "ros", "non-ros")
   }
-  saveRDS(peaks_sub, paste0("data-raw/ros_class/huc_match/melt_snotel/ros_peaks_ms_",
+  saveRDS(peaks_sub, paste0("data-raw/ros_class/huc_match/melt_snotel/ge1snotel/ros_peaks_ms_",
                             states[i], ".RDS"))
 }
 
+for (i in seq_along(states)) {
+  file <- readRDS(paste0("data-raw/ros_class/huc_match/melt_snotel/ge1snotel/ros_peaks_ms_",
+                         states[i], ".RDS"))
+  # add baseflow to all dfs
+  x <- dplyr::left_join(file, base_med, by = c("state", "id", "dt"))
+  # get rid of duplicate peakflow
+  temp <- x[, -7]
+  names(temp)[4] <- "peakflow"
+  temp <- temp[, c(1, 2, 5, 3, 4, 7, 6)]
+  temp
+  saveRDS(temp, paste0("data-raw/ros_class/huc_match/melt_snotel/ge1snotel/add_base_med/ms_base_",
+                       states[i], ".RDS"))
+}
 
 #### plots ####
 rhv_og <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_CA.RDS"))
