@@ -147,25 +147,21 @@ add_mult[, .(mean_mult = mean(mult, na.rm = TRUE),
          by = .(state, ros)][order(ros)][order(state)]
 
 ## plots
-# ros peaks
-ggplot(filter(add_mult, ros == "ros"), aes(x = base_med, y = mult)) +
-  geom_point() +
-  scale_x_continuous(trans = scales::log2_trans(),
-                     breaks = scales::trans_breaks("log2", function(x) 2 ^ x, n = 8),
-                     limits = c(1, 2 ^ 19)) +
-  scale_y_continuous(trans = scales::log2_trans(),
-                     breaks = scales::trans_breaks("log2", function(x) 2 ^ x, n = 8),
-                     limits = c(1, 2 ^ 13))
-
-# non-ros peaks
-ggplot(filter(add_mult, ros == "non-ros"), aes(x = base_med, y = mult)) +
-  geom_point() +
+# hexbin chart of ros vs non-ros mults faceted together
+g1 <- ggplot(add_mult, aes(x = base_med, y = mult)) +
+  geom_hex() +
   scale_x_continuous(trans = scales::log2_trans(),
                      breaks = scales::trans_breaks("log2", function(x) 2 ^ x, n = 8),
                      limits = c(1, 2 ^ 20)) +
   scale_y_continuous(trans = scales::log2_trans(),
                      breaks = scales::trans_breaks("log2", function(x) 2 ^ x, n = 8),
-                     limits = c(1, 2 ^ 14))
+                     limits = c(1, 2 ^ 14)) +
+  scale_fill_viridis_c() +
+  theme_bw() +
+  ggtitle("SNOTEL - Melt") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90)) +
+  facet_wrap(~ ros)
 
 #### temp_split mults ####
 ## temp_split
@@ -190,7 +186,23 @@ tot <- add_mult[, .(mean = mean(mult, na.rm = TRUE),
 # overall mult (using median):
 tot[2, 3] / tot[1, 3] # 2.46028
 
-#### temp mults ####
+## plots
+g2 <- ggplot(add_mult, aes(x = base_med, y = mult)) +
+  geom_hex() +
+  scale_x_continuous(trans = scales::log2_trans(),
+                     breaks = scales::trans_breaks("log2", function(x) 2 ^ x, n = 8),
+                     limits = c(1, 2 ^ 20)) +
+  scale_y_continuous(trans = scales::log2_trans(),
+                     breaks = scales::trans_breaks("log2", function(x) 2 ^ x, n = 8),
+                     limits = c(1, 2 ^ 14)) +
+  scale_fill_viridis_c() +
+  theme_bw() +
+  ggtitle("SNOTEL - Split Temp") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90)) +
+  facet_wrap(~ ros)
+
+#### temp_mults ####
 ## melt_snotel
 # combine all states into one data table
 combo <- data.table()
@@ -212,6 +224,21 @@ tot <- add_mult[, .(mean = mean(mult, na.rm = TRUE),
                 by = ros]
 # overall mult (using median):
 tot[2, 3] / tot[1, 3] # 2.480094
+
+g3 <- ggplot(add_mult, aes(x = base_med, y = mult)) +
+  geom_hex() +
+  scale_x_continuous(trans = scales::log2_trans(),
+                     breaks = scales::trans_breaks("log2", function(x) 2 ^ x, n = 8),
+                     limits = c(1, 2 ^ 20)) +
+  scale_y_continuous(trans = scales::log2_trans(),
+                     breaks = scales::trans_breaks("log2", function(x) 2 ^ x, n = 8),
+                     limits = c(1, 2 ^ 14)) +
+  scale_fill_viridis_c() +
+  theme_bw() +
+  ggtitle("SNOTEL - Temp") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90)) +
+  facet_wrap(~ ros)
 
 #### swe_snotel mults ####
 ## swe_snotel
@@ -236,7 +263,22 @@ tot <- add_mult[, .(mean = mean(mult, na.rm = TRUE),
 # overall mult (using median):
 tot[2, 3] / tot[1, 3] # 2.929367
 
+g4 <- ggplot(add_mult, aes(x = base_med, y = mult)) +
+  geom_hex() +
+  scale_x_continuous(trans = scales::log2_trans(),
+                     breaks = scales::trans_breaks("log2", function(x) 2 ^ x, n = 8),
+                     limits = c(1, 2 ^ 20)) +
+  scale_y_continuous(trans = scales::log2_trans(),
+                     breaks = scales::trans_breaks("log2", function(x) 2 ^ x, n = 8),
+                     limits = c(1, 2 ^ 14)) +
+  scale_fill_viridis_c() +
+  theme_bw() +
+  ggtitle("SNOTEL - SWE") +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90)) +
+  facet_wrap(~ ros)
 
-qnorm(0.025, 0, 1, lower.tail = FALSE)
 
+# combined plots ----------------------------------------------------------
+gridExtra::grid.arrange(g1, g2, g3, g4)
 
