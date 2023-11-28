@@ -48,3 +48,27 @@ temp <- rhv_all[datetime %in% seq(peaks_base$dt[235] - 1209600,
                 & id == peaks_base$id[235]]
 med <- median(temp$max_flow)
 
+
+# Re-calculation taking into account nearby peaks -------------------------
+states <- c("NV", "CA", "CO", "ID", "MT", "NM", "OR", "UT", "WA", "AZ", "WY")
+for (x in seq_along(states)) {
+  rhv_tot <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_", states[x], ".RDS"))
+  rhv_miss <- readRDS(paste0("data-raw/rhv_miss/rhv_miss_", states[x], ".RDS"))
+  rhv_all <- rbind(rhv_tot, rhv_miss)
+  data.table::setDT(rhv_all)
+
+  peaks_sub <- peaks[state == states[x]]
+  vec <- c()
+  for (i in seq_len(nrow(peaks_sub))) {
+    if (peaks_sub$dt[i] - )
+    temp <- rhv_all[datetime %in% seq(peaks_sub$dt[i] - 1209600,
+                                      peaks_sub$dt[i], by = "hour")
+                    & id == peaks_sub$id[i]]
+    vec[i] <- median(temp$max_flow)
+  }
+  peaks[state == states[x]]$base_med <- vec
+}
+
+saveRDS(peaks, "data-raw/peaks_fin/peaks_base_med.RDS")
+
+

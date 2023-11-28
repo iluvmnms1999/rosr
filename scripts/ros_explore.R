@@ -162,6 +162,7 @@ g1 <- ggplot(add_mult, aes(x = base_med, y = mult)) +
   theme(plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(angle = 90)) +
   facet_wrap(~ ros)
+g1
 
 #### temp_split mults ####
 ## temp_split
@@ -201,7 +202,7 @@ g2 <- ggplot(add_mult, aes(x = base_med, y = mult)) +
   theme(plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(angle = 90)) +
   facet_wrap(~ ros)
-
+g2
 #### temp_mults ####
 ## melt_snotel
 # combine all states into one data table
@@ -239,6 +240,7 @@ g3 <- ggplot(add_mult, aes(x = base_med, y = mult)) +
   theme(plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(angle = 90)) +
   facet_wrap(~ ros)
+g3
 
 #### swe_snotel mults ####
 ## swe_snotel
@@ -277,8 +279,10 @@ g4 <- ggplot(add_mult, aes(x = base_med, y = mult)) +
   theme(plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(angle = 90)) +
   facet_wrap(~ ros)
-
+g4
 
 # combined plots ----------------------------------------------------------
 gridExtra::grid.arrange(g1, g2, g3, g4)
+
+x <- readRDS("data-raw/snotel/snotel_clean_OR.RDS")
 
