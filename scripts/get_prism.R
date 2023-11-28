@@ -22,8 +22,8 @@ for (i in seq_along(years)) {
 }
 
 # read prism data as raster
-prism_ppt_19810102 <- terra::rast("data-raw/prism/2014/PRISM_ppt_stable_4kmD2_20150201_bil.bil")
-terra::plot(prism_ppt_19810102)
+prism_ppt_20230101 <- terra::rast("data-raw/prism/2021/PRISM_ppt_stable_4kmD2_20220101_bil.bil")
+terra::plot(prism_ppt_20230101)
 
 # read in SNOTEL data frame with station coordinates
 snotel <- readRDS("data-raw/snotel/snotel_huc.RDS")
