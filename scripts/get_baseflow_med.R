@@ -59,16 +59,22 @@ for (x in seq_along(states)) {
 
   peaks_sub <- peaks[state == states[x]]
   vec <- c()
-  for (i in seq_len(nrow(peaks_sub))) {
-    if (peaks_sub$dt[i] - )
-    temp <- rhv_all[datetime %in% seq(peaks_sub$dt[i] - 1209600,
-                                      peaks_sub$dt[i], by = "hour")
-                    & id == peaks_sub$id[i]]
-    vec[i] <- median(temp$max_flow)
+  for (i in seq_len(nrow(peaks_sub) - 1)) {
+    if (peaks_sub$dt[i + 1] - peaks_sub$dt[i] < 1209600) {
+      temp <- rhv_all[datetime %in% seq(peaks_sub$dt[i] - 1209600,
+                                        peaks_sub$dt[i], by = "hour")
+                      & id == peaks_sub$id[i]]
+      vec[i] <- median(temp$max_flow)
+    } else {
+      temp <- rhv_all[datetime %in% seq(peaks_sub$dt[i] - 1209600,
+                                        peaks_sub$dt[i], by = "hour")
+                      & id == peaks_sub$id[i]]
+      vec[i] <- median(temp$max_flow)
+    }
   }
   peaks[state == states[x]]$base_med <- vec
 }
 
-saveRDS(peaks, "data-raw/peaks_fin/peaks_base_med.RDS")
+saveRDS(peaks, "data-raw/peaks_fin/peaks_base_med_ref.RDS")
 
 
