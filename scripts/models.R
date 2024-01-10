@@ -23,8 +23,10 @@
 
 library(rpart)
 library(rpart.plot)
+library(data.table)
 
-## make data matrix
+
+# make data matrix --------------------------------------------------------
 # get peaks data
 states <- c("NV", "CA", "CO", "ID", "MT", "NM", "OR", "UT", "WA", "AZ", "WY")
 ros_all <- data.frame()
@@ -43,18 +45,65 @@ for (i in seq_along(states)) {
                       states[i], ".RDS"))
   snotel_all <- rbind(snotel_all, x)
 }
-# average measurements between stations in huc region
-snotel_av <- snotel_all[, .(elev_av = mean(elev, na.rm = TRUE),
-               temp_degc_av = mean(temp_degc, na.rm = TRUE),
-               prec_av = mean(prec, na.rm = TRUE),
-               snow_dep_av = mean(snow_dep, na.rm = TRUE),
-               swe_av = mean(swe, na.rm = TRUE),
-               soil_mp8in_av = mean(soil_mp8in, na.rm = TRUE),
-               soil_mp20in_av = mean(soil_mp20in),
-               melt_av = mean(melt, na.rm = TRUE)
-              ),
-              by = .(date, huc)]
+# average and max/min measurements between stations in huc regions
+snotel_av <- snotel_all[, .(elev_av = mean(elev),
+                            elev_min = min(elev),
+                            elev_max = max(elev),
+                            temp_degc_av = mean(temp_degc),
+                            temp_degc_min = min(temp_degc),
+                            temp_degc_max = max(temp_degc),
+                            prec_av = mean(prec),
+                            prec_min = min(prec),
+                            prec_max = max(prec),
+                            snow_dep_av = mean(snow_dep),
+                            snow_dep_min = min(snow_dep),
+                            snow_dep_max = max(snow_dep),
+                            swe_av = mean(swe),
+                            swe_min = min(swe),
+                            swe_max = max(swe),
+                            soil_mp8in_av = mean(soil_mp8in),
+                            soil_mp8in_min = min(soil_mp8in),
+                            soil_mp8in_max = max(soil_mp8in),
+                            soil_mp20in_av = mean(soil_mp20in),
+                            soil_mp20in_min = min(soil_mp20in),
+                            soil_mp20in_max = max(soil_mp20in),
+                            melt_av = mean(melt),
+                            melt_min = min(melt),
+                            melt_max = max(melt)),
+                        by = .(date, huc)]
 
 # join snotel and ros_class by huc and date
-ros_all[snotel_av, on = .(huc, date)]
+peak_data_dt <- snotel_av[ros_all, on = .(huc, date)]
 
+# add multiplier
+peak_data_dt <- peak_data_dt[base_med > 1][, mult := peakflow / base_med]
+
+# saveRDS(peak_data_dt, "data-raw/modeling/peak_data_dt.rds")
+
+
+
+# fit regression tree -----------------------------------------------------
+peak_data_dt <- readRDS("data-raw/modeling/peak_data_dt.rds")
+
+# build the initial tree
+tree <- rpart(mult ~ temp_degc_av + snow_dep_av +
+                prec_av + soil_mp8in_av + elev_av + ros,
+              data = peak_data_dt, control = rpart.control(cp = .00001))
+
+# view results
+printcp(tree) # don't get a ton of splits... is this bad?
+rpart.plot(tree)
+
+## prune tree
+# identify best cp value to use
+best <- tree$cptable[which.min(tree$cptable[,"xerror"]),"CP"]
+
+# produce pruned tree based on the best cp value
+pruned_tree <- prune(tree, cp = best)
+
+# plot the pruned tree
+prp(pruned_tree,
+    faclen = 0, # use full names for factor labels
+    extra = 1, # display number of obs. for each terminal node
+    roundint = F, # don't round to integers in output
+    digits = 5) # display 5 decimal places in output

@@ -437,7 +437,7 @@ y_max <- max(dplyr::filter(peaks_df,
 )
 
 # create plot of data and peak classification
-ggplot2::ggplot(sub, ggplot2::aes(x = as.POSIXct(datetime),
+ggplot(sub, ggplot2::aes(x = as.POSIXct(datetime),
                                   y = max_flow)) +
   geom_point(size = .2, col = "grey50") +
   ggtitle(paste0("Streamflow Peaks at Station ",

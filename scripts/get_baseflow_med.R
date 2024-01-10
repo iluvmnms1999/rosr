@@ -29,6 +29,25 @@ for (x in seq_along(states)) {
 saveRDS(peaks, "data-raw/peaks_fin/peaks_base_med.RDS")
 
 # plot baselines for visuals
+base <- readRDS("data-raw/peaks_fin/peaks_base_med.RDS")
+base_NV <- base[state == "NV"][order(-y)]
+rhv_tot <- readRDS("data-raw/rhv_tot/rhv_tot_NV.RDS")
+rhv_miss <- readRDS("data-raw/rhv_miss/rhv_miss_NV.RDS")
+rhv_all <- rbind(rhv_tot, rhv_miss)
+data.table::setDT(rhv_all)
+
+peaks_base <- base_NV[, base := rep(0, times = nrow(base_NV))]
+temp <- rhv_all[datetime %in% seq(peaks_base$dt[1] - 1209600,
+                                  peaks_base$dt[1], by = "hour")
+                & id == peaks_base$id[1]]
+med <- median(temp$max_flow)
+
+pdf("figures/base_med_nv_ex.pdf", width = 6, height = 4)
+ggplot(temp, aes(x = datetime, y = max_flow)) +
+  geom_point() +
+  geom_abline(slope = 0, intercept = med, col = "red")
+dev.off()
+
 plot(temp$datetime, temp$max_flow)
 abline(med, 0, col = "red")
 

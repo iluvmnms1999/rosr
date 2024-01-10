@@ -148,7 +148,8 @@ add_mult[, .(mean_mult = mean(mult, na.rm = TRUE),
 
 ## plots
 # hexbin chart of ros vs non-ros mults faceted together
-g1 <- ggplot(add_mult, aes(x = base_med, y = mult)) +
+pdf("figures/hexbin_melt.pdf", width = 6, height = 4)
+ggplot(add_mult, aes(x = base_med, y = mult)) +
   geom_hex() +
   scale_x_continuous(trans = scales::log2_trans(),
                      breaks = scales::trans_breaks("log2", function(x) 2 ^ x, n = 8),
@@ -162,7 +163,7 @@ g1 <- ggplot(add_mult, aes(x = base_med, y = mult)) +
   theme(plot.title = element_text(hjust = 0.5),
         axis.text.x = element_text(angle = 90)) +
   facet_wrap(~ ros)
-g1
+dev.off()
 
 #### temp_split mults ####
 ## temp_split
