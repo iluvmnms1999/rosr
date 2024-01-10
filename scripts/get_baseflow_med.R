@@ -96,4 +96,5 @@ for (x in seq_along(states)) {
 
 saveRDS(peaks, "data-raw/peaks_fin/peaks_base_med_ref.RDS")
 
-
+# CHECKS
+peaks <- readRDS("data-raw/peaks_fin/peaks_tot.RDS")
