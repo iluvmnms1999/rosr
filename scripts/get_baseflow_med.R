@@ -1,3 +1,4 @@
+library(data.table)
 peaks <- readRDS("data-raw/peaks_fin/peaks_tot.RDS") # this file includes all
 # peaks, even for initially missing stations (only 52 of them reported peaks)
 data.table::setDT(peaks)
@@ -7,8 +8,7 @@ data.table::setDT(peaks)
 
 
 # workflow for entire peaks dataframe
-states <- c(#"NV",
-  "CA", "CO", "ID", "MT", "NM", "OR", "UT", "WA", "AZ", "WY")
+states <- c("NV", "CA", "CO", "ID", "MT", "NM", "OR", "UT", "WA", "AZ", "WY")
 for (x in seq_along(states)) {
   rhv_tot <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_", states[x], ".RDS"))
   rhv_miss <- readRDS(paste0("data-raw/rhv_miss/rhv_miss_", states[x], ".RDS"))
@@ -17,11 +17,18 @@ for (x in seq_along(states)) {
 
   peaks_sub <- peaks[state == states[x]]
   vec <- c()
-  for (i in seq_len(nrow(peaks_sub))) {
-    temp <- rhv_all[datetime %in% seq(peaks_sub$dt[i] - 1209600,
-                                      peaks_sub$dt[i], by = "hour")
-                    & id == peaks_sub$id[i]]
-    vec[i] <- median(temp$max_flow)
+  for (i in seq_len(nrow(peaks_sub) - 1)) {
+    if (peaks_sub$dt[i + 1] - peaks_sub$dt[i] < 1209600) {
+      temp <- rhv_all[datetime %in% seq(peaks_sub$dt[i] - 1209600,
+                                        peaks_sub$dt[i], by = "hour")
+                      & id == peaks_sub$id[i]]
+      vec[i] <- median(temp$max_flow)
+    } else {
+      temp <- rhv_all[datetime %in% seq(peaks_sub$dt[i] - 1209600,
+                                        peaks_sub$dt[i], by = "hour")
+                      & id == peaks_sub$id[i]]
+      vec[i] <- median(temp$max_flow)
+    }
   }
   peaks[state == states[x]]$base_med <- vec
 }
@@ -69,6 +76,8 @@ med <- median(temp$max_flow)
 
 
 # Re-calculation taking into account nearby peaks -------------------------
+# add base_med col. to peaks df beforehand
+peaks <- peaks[, base_med := 0]
 states <- c("NV", "CA", "CO", "ID", "MT", "NM", "OR", "UT", "WA", "AZ", "WY")
 for (x in seq_along(states)) {
   rhv_tot <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_", states[x], ".RDS"))
@@ -77,17 +86,23 @@ for (x in seq_along(states)) {
   data.table::setDT(rhv_all)
 
   peaks_sub <- peaks[state == states[x]]
+  # using data.table for this step automatically converts to days but some are
+  # wrong reported as days when they are actually hours
+  peaks_diff <- peaks_sub |>
+    group_by(id) |>
+    mutate(time_diff = c(as.difftime(0, units = "secs"), diff(dt)))
+  data.table::setDT(peaks_diff)
   vec <- c()
-  for (i in seq_len(nrow(peaks_sub) - 1)) {
-    if (peaks_sub$dt[i + 1] - peaks_sub$dt[i] < 1209600) {
-      temp <- rhv_all[datetime %in% seq(peaks_sub$dt[i] - 1209600,
-                                        peaks_sub$dt[i], by = "hour")
-                      & id == peaks_sub$id[i]]
+  for (i in seq_len(nrow(peaks_diff))) {
+    if (peaks_diff$time_diff[i] < 1209600 & peaks_diff$time_diff[i] > 0) {
+      temp <- rhv_all[datetime %in% seq(peaks_diff$dt[i - 1],
+                                        peaks_diff$dt[i], by = "hour")
+                      & id == peaks_diff$id[i]]
       vec[i] <- median(temp$max_flow)
     } else {
-      temp <- rhv_all[datetime %in% seq(peaks_sub$dt[i] - 1209600,
-                                        peaks_sub$dt[i], by = "hour")
-                      & id == peaks_sub$id[i]]
+      temp <- rhv_all[datetime %in% seq(peaks_diff$dt[i] - 1209600,
+                                        peaks_diff$dt[i], by = "hour")
+                      & id == peaks_diff$id[i]]
       vec[i] <- median(temp$max_flow)
     }
   }
@@ -97,4 +112,5 @@ for (x in seq_along(states)) {
 saveRDS(peaks, "data-raw/peaks_fin/peaks_base_med_ref.RDS")
 
 # CHECKS
-peaks <- readRDS("data-raw/peaks_fin/peaks_tot.RDS")
+new <- readRDS("data-raw/peaks_fin/peaks_base_med_ref.RDS")
+og <- readRDS("data-raw/peaks_fin/peaks_base_med.RDS")

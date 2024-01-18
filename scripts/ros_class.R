@@ -5,7 +5,7 @@ library(dplyr)
 #### import/prep necessary data ####
 usgs_huc <- readRDS("data-raw/usgs_fs/usgs_huc.RDS")
 snotel_huc <- readRDS("data-raw/snotel/snotel_huc.RDS")
-base_med <- readRDS("data-raw/peaks_fin/peaks_base_med.RDS")
+base_med <- readRDS("data-raw/peaks_fin/peaks_base_med_ref.RDS")
 peaks <- readRDS("data-raw/peaks_fin/peaks_tot.RDS")
 
 # add hucs to peaks
@@ -127,7 +127,7 @@ for (i in seq_along(states)) {
   names(temp)[4] <- "peakflow"
   temp <- temp[, c(1, 2, 5, 3, 4, 7, 6)]
   temp
-  saveRDS(temp, paste0("data-raw/ros_class/huc_match/temp/ge1snotel/add_base_med/t_base_",
+  saveRDS(temp, paste0("data-raw/ros_class/huc_match/temp/ge1snotel/add_base_med_ref/t_baseref_",
                        states[i], ".RDS"))
 }
 
@@ -293,7 +293,7 @@ for (i in seq_along(states)) {
   names(temp)[4] <- "peakflow"
   temp <- temp[, c(1, 2, 5, 3, 4, 7, 6)]
   temp
-  saveRDS(temp, paste0("data-raw/ros_class/huc_match/swe_snotel/ge1snotel/add_base_med/ss_base_",
+  saveRDS(temp, paste0("data-raw/ros_class/huc_match/swe_snotel/ge1snotel/add_base_med_ref/ss_baseref_",
                        states[i], ".RDS"))
 }
 
@@ -404,7 +404,7 @@ for (i in seq_along(states)) {
   names(temp)[4] <- "peakflow"
   temp <- temp[, c(1, 2, 5, 3, 4, 7, 6)]
   temp
-  saveRDS(temp, paste0("data-raw/ros_class/huc_match/melt_snotel/ge1snotel/add_base_med/ms_base_",
+  saveRDS(temp, paste0("data-raw/ros_class/huc_match/melt_snotel/ge1snotel/add_base_med_ref/ms_baseref_",
                        states[i], ".RDS"))
 }
 

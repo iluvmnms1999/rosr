@@ -26,13 +26,13 @@ library(rpart.plot)
 library(data.table)
 
 
-# make data matrix --------------------------------------------------------
+## make data matrix --------------------------------------------------------
 # get peaks data
 states <- c("NV", "CA", "CO", "ID", "MT", "NM", "OR", "UT", "WA", "AZ", "WY")
 ros_all <- data.frame()
 for (i in seq_along(states)) {
   x <- readRDS(paste0("data-raw/ros_class/huc_match/melt_snotel/ge1snotel",
-                      "/add_base_med/ms_base_", states[i], ".RDS"))
+                      "/add_base_med_ref/ms_baseref_", states[i], ".RDS"))
   ros_all <- rbind(ros_all, x)
 }
 # get just date instead of datetime
@@ -76,22 +76,26 @@ snotel_av <- snotel_all[, .(elev_av = mean(elev),
 peak_data_dt <- snotel_av[ros_all, on = .(huc, date)]
 
 # add multiplier
-peak_data_dt <- peak_data_dt[base_med > 1][, mult := peakflow / base_med]
+peak_data_dt <- peak_data_dt[base_med > 0][, mult := peakflow / base_med]
 
 # saveRDS(peak_data_dt, "data-raw/modeling/peak_data_dt.rds")
 
 
 
-# fit regression tree -----------------------------------------------------
-peak_data_dt <- readRDS("data-raw/modeling/peak_data_dt.rds")
+## fit regression tree -----------------------------------------------------
+# peak_data_dt <- readRDS("data-raw/modeling/peak_data_dt.rds")
 
 # build the initial tree
-tree <- rpart(mult ~ temp_degc_av + snow_dep_av +
-                prec_av + soil_mp8in_av + elev_av + ros,
-              data = peak_data_dt, control = rpart.control(cp = .00001))
+tree <- rpart(mult ~ temp_degc_av + temp_degc_min + temp_degc_max +
+                snow_dep_av + snow_dep_min + snow_dep_max + prec_av + prec_min +
+                prec_max + soil_mp8in_av + soil_mp8in_min + soil_mp8in_max +
+                soil_mp20in_av + soil_mp20in_min + soil_mp20in_max + melt_av +
+                melt_min + melt_max + elev_av + elev_min + elev_max + swe_av +
+                swe_min + swe_max + ros,
+              data = peak_data_dt, control = rpart.control(cp = .001))
 
 # view results
-printcp(tree) # don't get a ton of splits... is this bad?
+printcp(tree)
 rpart.plot(tree)
 
 ## prune tree
@@ -107,3 +111,21 @@ prp(pruned_tree,
     extra = 1, # display number of obs. for each terminal node
     roundint = F, # don't round to integers in output
     digits = 5) # display 5 decimal places in output
+
+## fit gam ---------------------------------------------------------------------
+# mgcv example:
+# https://m-clark.github.io/generalized-additive-models/application.html
+library(mgcv)
+
+peak_data_dt <- peak_data_dt[, ros_num := ifelse(ros == "ros", 1, 0)]
+
+# first try linear model
+mod_lm = gam(mult ~ ros, data = peak_data_dt)
+summary(mod_lm)
+
+# now try gam
+mod_gam1 = gam(mult ~ s(temp_degc_av, bs = "tp"), data = peak_data_dt)
+summary(mod_gam1)
+plot(mod_gam1)
+
+
