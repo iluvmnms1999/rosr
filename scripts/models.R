@@ -119,6 +119,7 @@ library(mgcv)
 
 peak_data_dt <- peak_data_dt[, ros_num := ifelse(ros == "ros", 1, 0)]
 
+# just ROS
 # first try linear model
 mod_lm = gam(mult ~ ros, data = peak_data_dt)
 summary(mod_lm)
@@ -128,4 +129,17 @@ mod_gam1 = gam(mult ~ s(temp_degc_av, bs = "tp"), data = peak_data_dt)
 summary(mod_gam1)
 plot(mod_gam1)
 
+# more features
+mod_lm <- gam(mult ~ s(temp_degc_av) + s(temp_degc_min) + s(temp_degc_max) +
+  s(snow_dep_av) + s(snow_dep_min) + s(snow_dep_max) + s(prec_av) + s(prec_min) +
+  s(prec_max) + s(soil_mp8in_av) + s(soil_mp8in_min) + s(soil_mp8in_max) +
+  s(soil_mp20in_av) + s(soil_mp20in_min) + s(soil_mp20in_max) + s(melt_av) +
+  s(melt_min) + s(melt_max) + s(elev_av) + s(elev_min) + s(elev_max) + s(swe_av) +
+  s(swe_min) + s(swe_max) + ros_num, data = peak_data_dt)
+summary(mod_lm)
+
+names(peak_data_dt)
+pairs(peak_data_dt[, c(3:26, 30:31, 33)])
+
+# remotes::install_github("mlverse/chattr")
 
