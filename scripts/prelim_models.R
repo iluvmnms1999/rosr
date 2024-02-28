@@ -414,6 +414,7 @@ kelvyn$gg_var_imp_permute
 
 
 # stressor ----------------------------------------------------------------
+peak_data_dt <- readRDS("data-raw/modeling/peak_data_dt.rds")
 
 library(stressor)
 
@@ -430,8 +431,6 @@ stressor::mlm_regressor(
     swe_av + swe_min + swe_max + swe_med +
     ros_num + smp,
   train_data = peak_data_dt,
-  sort_v = 'R2',
-  seed = 43421
+  #sort_v = 'R2',
+ # seed = 43421
 )
-
-stressor::
