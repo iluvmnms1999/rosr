@@ -55,6 +55,15 @@ for (i in seq_along(states)) {
 }
 
 
+prism_all <- data.frame()
+for (i in seq_along(states)) {
+  x <- readRDS(paste0("data-raw/prism/snotel_prism_comb/comb_w_prism_",
+                      states[i], ".RDS"))
+  prism_all <- rbind(prism_all, x)
+}
+
+
+
 
 
 
