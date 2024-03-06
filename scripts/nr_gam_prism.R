@@ -1,8 +1,6 @@
+library(terra)
+
 ## re-get prism data for aggregation purposes
-
-prism_ppt_20230101 <- terra::rast("C:/Users/student/Downloads/school/stat_6685/proj/elev/data-raw/prism/daily_ppt/PRISM_ppt_stable_4kmD2_20220101_bil.bil")
-
-terra::plot(prism_ppt_20230101)
 
 # get huc boundaries for cropping
 # get watersheds for all states, combine
@@ -22,8 +20,23 @@ terra::plot(prism_ppt_20230101)
 # ws <- ws_all[!duplicated(ws_all[, c("huc8", "geometry")]),]
 # save huc8 regions
 # saveRDS(ws, "data-raw/wbd/ws_huc8.RDS")
+
 ws <- readRDS("data-raw/wbd/ws_huc8.RDS")
+files <- list.files("data-raw/prism/daily_ppt")
 
-prism_ws_rast <- terra::extract(prism_ppt_20230101, vect(ws$geometry[1]))
+df <- data.frame()
 
-vect(ws$geometry)
+prism_ppt_20230101 <- terra::rast("C:/Users/student/Downloads/school/stat_6685/proj/elev/data-raw/prism/daily_ppt/PRISM_ppt_stable_4kmD2_20220101_bil.bil")
+
+for (i in seq_along())
+for (i in seq_along(ws$huc8)) {
+  huc <- ws$huc8[1]
+  prism_ws_rast <- terra::extract(prism_ppt_20230101, vect(ws$geometry[1]),
+                                  weights = TRUE,
+                                  exact = TRUE, touches = TRUE)
+  vals <- c(median(prism_ws_rast[,2], na.rm = TRUE),
+            mean(prism_ws_rast[,2], na.rm = TRUE),
+            max(prism_ws_rast[,2], na.rm = TRUE),
+            sum(prism_ws_rast[,2], na.rm = TRUE)
+  )
+}
