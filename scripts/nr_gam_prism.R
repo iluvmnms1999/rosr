@@ -23,33 +23,29 @@ library(terra)
 
 ws <- readRDS("data-raw/wbd/ws_huc8.RDS")
 
-# change wd to elev
-files <- list.files("data-raw/prism/daily_ppt")
 
+## GET PREC
 df <- data.frame()
 
-prism_ppt_20230101 <- terra::rast("C:/Users/student/Downloads/school/stat_6685/proj/elev/data-raw/prism/daily_ppt/PRISM_ppt_stable_4kmD2_20220101_bil.bil")
-
+# change wd to elev
+files <- list.files(paste0("data-raw/prism/daily_ppt"))
 bils <- files[grep(".bil$", files)]
 dates <- substr(bils, 24, 31)
 for (i in seq_along(bils)) {
-  prism <- terra::rast(paste0("data-raw/prism/daily_ppt/", bils[i]))
+  prism_ppt <- terra::rast(paste0("data-raw/prism/daily_ppt/", bils[i]))
   for (j in seq_along(ws$huc8)) {
-    huc <- ws$huc8[j]
-    prism_ws_rast <- terra::extract(prism, vect(ws$geometry[j]),
+    prism_rast <- terra::extract(prism_ppt, vect(ws$geometry[j]),
                                     weights = TRUE,
                                     exact = TRUE, touches = TRUE)
     vals <- c(dates[i],
-              huc,
-              median(prism_ws_rast[,2], na.rm = TRUE),
-              mean(prism_ws_rast[,2], na.rm = TRUE),
-              max(prism_ws_rast[,2], na.rm = TRUE),
-              sum(prism_ws_rast[,2], na.rm = TRUE)
+              ws$huc8[j],
+              median(prism_rast[,2], na.rm = TRUE),
+              mean(prism_rast[,2], na.rm = TRUE),
+              max(prism_rast[,2], na.rm = TRUE),
+              sum(prism_rast[,2], na.rm = TRUE)
     )
     df <- rbind(df, vals)
   }
 }
-colnames(df) <- c("date", "med_prec", "mean_prec", "max_prec", "sum_prec")
-saveRDS(df, "data-raw/prism/prism_summaries.rds")
-
-
+names(df) <- c("date", "huc8", "median", "mean", "max", "sum")
+saveRDS("data-raw/prism/ppt_summaries.rds")
