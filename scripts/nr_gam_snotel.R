@@ -161,19 +161,34 @@ peak_data_dt %>% # median overall by location
 
 # you're gonna need go back to the original data and get the summary stats
 # for each station
+var_summaries <- readRDS("data-raw/modeling/var_summaries.rds")
+med_temps <- peak_data[, .(med_temp = median(temp_degc_av, na.rm = TRUE)), by = ros]
 
+setDT(var_summaries)
+var_summaries$nonros_temp_med <- med_temps$med_temp[1]
+var_summaries$ros_temp_med <- med_temps$med_temp[2]
+var_summaries$nonros_snowdep <- 0
+var_summaries$nonros_swe <- 0
+
+colnames(var_summaries)[4:7] <- c("ros_snowdep", "nonros_prec", "ros_prec", "ros_swe")
+
+var_summaries <- var_summaries[, c(3, 1, 2, 10, 4, 5, 6, 11, 7, 8, 9)]
+
+# add lat lon
+gam_data <- left_join(var_summaries, peak_data[, c("id", "lat", "lon")], join_by(id),
+          multiple = "any")
+
+# add mults
+gam_data <- left_join(peak_data[, c("id", "dt", "mult")], gam_data, join_by(id))
+
+saveRDS(gam_data, "data-raw/modeling/gam_data.rds")
 
 # run gam on each gage ----------------------------------------------------
 # iterate through each gage with peaks
 set.seed(42) #Set seed for reproducibility
 
-for (i in seq_along(unique(peak_data_dt$id))) {
-  temp <- peak_data_dt |>
-    filter(id == unique(peak_data_dt$id)[i])
-  ros <- temp |>
-    filter(ros_num == 1)
-  non_ros <- temp |>
-    filter(ros_num == 0)
+for (i in seq_along(gam_data$id))) {
+
 
   ros_preds <- rep(as.numeric(NA), nrow(ros))
   for (i in 1:5) {
@@ -200,5 +215,25 @@ for (i in seq_along(unique(peak_data_dt$id))) {
 
 }
 
+
+gam_nr <- mgcv::gam(log(mult) ~
+                      nonros_temp_med +
+                      nonros_snowdep +
+                      nonros_prec +
+                      nonros_swe +
+                      med_bf,
+                    data = gam_data[id == unique(gam_data$id[1])][1])
+
+predict(gam_nr, gam_data[id == unique(gam_data$id[2])][7])
+
+gam_nr <- mgcv::gam(log(mult) ~
+                      ros_temp_med +
+                      ros_snowdep +
+                      ros_prec +
+                      ros_swe +
+                      med_bf,
+                    data = gam_data[id == unique(gam_data$id[2])][1:6])
+
+predict(gam_nr, gam_data[id == unique(gam_data$id[2])][7])
 
 
