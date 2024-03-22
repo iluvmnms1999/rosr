@@ -2,6 +2,7 @@ library(mgcv)
 library(dplyr)
 library(ggplot2)
 library(tidyr)
+library(tidyverse)
 
 # load data matrix
 peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf.rds")
@@ -145,7 +146,7 @@ peak_data_dt %>% # 0 for non-ros, med ann max for ros
   geom_density()
 
 peak_data_dt %>% # 25th percentile of annual max for non-ros, 75th for ros
-  ggplot(aes(x = log(prec_max), col = ros)) +
+  ggplot(aes(x = prec_max, col = ros)) +
   geom_density()
 
 peak_data_dt %>% # 0 for non-ros, med ann max for ros
@@ -159,81 +160,144 @@ peak_data_dt %>% # median overall by location
 # predict with gam twice for each location using both profiles, compute ratio
 # of both predictions
 
-# you're gonna need go back to the original data and get the summary stats
-# for each station
-var_summaries <- readRDS("data-raw/modeling/var_summaries.rds")
-med_temps <- peak_data[, .(med_temp = median(temp_degc_av, na.rm = TRUE)), by = ros]
-
-setDT(var_summaries)
-var_summaries$nonros_temp_med <- med_temps$med_temp[1]
-var_summaries$ros_temp_med <- med_temps$med_temp[2]
-var_summaries$nonros_snowdep <- 0
-var_summaries$nonros_swe <- 0
-
-colnames(var_summaries)[4:7] <- c("ros_snowdep", "nonros_prec", "ros_prec", "ros_swe")
-
-var_summaries <- var_summaries[, c(3, 1, 2, 10, 4, 5, 6, 11, 7, 8, 9)]
-
-# add lat lon
-gam_data <- left_join(var_summaries, peak_data[, c("id", "lat", "lon")], join_by(id),
-          multiple = "any")
-
-# add mults
-gam_data <- left_join(peak_data[, c("id", "dt", "mult")], gam_data, join_by(id))
-
-saveRDS(gam_data, "data-raw/modeling/gam_data.rds")
+# check make_gam_data.R
 
 # run gam on each gage ----------------------------------------------------
-# iterate through each gage with peaks
-set.seed(42) #Set seed for reproducibility
-
-for (i in seq_along(gam_data$id))) {
+# define model and train model on profiles
+gam_data <- readRDS("data-raw/modeling/gam_datav2.rds")
 
 
-  ros_preds <- rep(as.numeric(NA), nrow(ros))
-  for (i in 1:5) {
-    ros$weight <- sample(c(0,1), size = nrow(ros),
-                                  replace = TRUE,
-                                  prob = c(0.2, 0.8))
-    index <- ros$weights == 0
+# reformat peak data so we have the same variables
+data.table::setDT(peak_data_dt)
+peak_data <- peak_data_dt[, .(id, dt, mult, huc, med_bf = base_med, lat, lon,
+                              ros, snowdep = snow_dep_av, prec_med = prec_max,
+                              swe = swe_av, temp = temp_degc_av)]
 
-    gam_nr <- mgcv::gam(log(mult) ~
-                          s(temp_degc_av) +
-                          s(snow_dep_av) +
-                          s(prec_max) +
-                          s(swe_av) +
-                          s(base_med) +
-                          s(lat, lon, bs = 'sos', k = 25),
-                        data = ros,
-                        weights = ros$weight)
+# fit gam
+gam_obj <- mgcv::gam(log(mult) ~
+                       s(temp) +
+                       s(snowdep) +
+                       s(prec_med) +
+                       s(swe) +
+                       s(log(med_bf)) +
+                       s(lat, lon, bs = 'sos', k = 25),
+                     data = peak_data)
 
-    ros_preds[index] <- predict(
-      gam_nr, ros[ros$weight == 0,]
-    )
-  }
-  gam_nr_capped <- pmax(gam_nr_preds, 0)
+# make preds
+preds <- predict(gam_obj, gam_data)
+preds_capped <- pmax(preds, 0)
 
-}
+# add preds to predicted data
+gam_data$gam_preds <- exp(preds_capped)
 
+# calculate ratios of mults
+ratios <- gam_data |> select(id, huc, gam_preds, ros) |>
+  group_by(id) |>
+  slice(1:2) |>
+  pivot_wider(names_from = ros, values_from = gam_preds) |>
+  filter(nonros > 1 & ros > 1) |>
+  mutate(mult_ratio = ros / nonros)
 
-gam_nr <- mgcv::gam(log(mult) ~
-                      nonros_temp_med +
-                      nonros_snowdep +
-                      nonros_prec +
-                      nonros_swe +
-                      med_bf,
-                    data = gam_data[id == unique(gam_data$id[1])][1])
+# visualize ratio of ratios
+pdf("figures/total_ratios.pdf", height = 6, width = 6)
+ratios |>
+  ggplot(aes(x = mult_ratio)) +
+  geom_density()
+dev.off()
 
-predict(gam_nr, gam_data[id == unique(gam_data$id[2])][7])
+summary(ratios$mult_ratio)
 
-gam_nr <- mgcv::gam(log(mult) ~
-                      ros_temp_med +
-                      ros_snowdep +
-                      ros_prec +
-                      ros_swe +
-                      med_bf,
-                    data = gam_data[id == unique(gam_data$id[2])][1:6])
+# just look at nevada ratios trained on all data
+ws <- readRDS("data-raw/wbd/ws_huc8_geom.rds")
 
-predict(gam_nr, gam_data[id == unique(gam_data$id[2])][7])
+# which hucs are in nevada
+ind <- which(str_detect(ws$states, "NV"))
+nv_hucs <- ws[ind,]$huc8
 
+# get just nevada ratios
+nev <- ratios |>
+  filter(huc %in% nv_hucs)
 
+# plot
+pdf("figures/nev_ratios.pdf", height = 6, width = 6)
+nev |>
+  ggplot(aes(x = mult_ratio)) +
+  geom_density()
+dev.off()
+
+summary(nev$mult_ratio)
+
+# just nevada ^^ -------------------------------------------------------------
+# get watersheds for all states, combine
+# regions <- c("10", "11", "13", "14", "15", "16", "17", "18")
+# ws_all <- data.frame()
+# for (i in seq_along(regions)) {
+#   temp <- sf::st_read(
+#     dsn = paste0("data-raw/wbd/huc4_geoms/WBD_", regions[i], "_HU2_Shape/Shape"),
+#     layer = "WBDHU8"
+#   )
+#   temp_val <- sf::st_make_valid(temp)
+#   temp_sub <- select(temp_val, c(states, huc8, geometry))
+#   ws_all <- rbind(ws_all, temp_sub)
+#
+#
+# }
+# # remove duplicates
+# ws <- ws_all[!duplicated(ws_all[, c("huc8", "geometry")]),]
+# saveRDS(ws, "data-raw/wbd/ws_huc8_geom.rds")
+ws <- readRDS("data-raw/wbd/ws_huc8_geom.rds")
+
+# which hucs are in nevada
+ind <- which(str_detect(ws$states, "NV"))
+nv_hucs <- ws[ind,]$huc8
+
+# # expand bounding boxes of hucs
+# bbox_df <- as.data.frame(do.call("rbind", lapply(st_geometry(nv_hucs), st_bbox)))
+# bbox_df <- cbind(nv_hucs$huc8, bbox_df)
+# head(bbox_df)
+#
+# # subset left and right nev
+# left <- bbox_df |>
+#   filter(xmin < -118)
+
+gam_data <- readRDS("data-raw/modeling/gam_data.rds")
+data.table::setDT(peak_data_dt)
+nv_peaks <- peak_data_dt[huc %in% nv_hucs] # left$`nv_hucs$huc8`
+data.table::setDT(nv_peaks)
+nv_peak_data <- nv_peaks[, .(id, dt, mult, huc, med_bf = base_med, lat, lon,
+                              ros, snowdep = snow_dep_av, prec = prec_max,
+                              swe = swe_av, temp = temp_degc_av)]
+
+nv_gam_data <- gam_data[id %in% unique(nv_peak_data$id)]
+
+# fit gam
+nv_gam <- mgcv::gam(log(mult) ~
+                       s(temp) +
+                       s(snowdep) +
+                       s(prec) +
+                       s(swe) +
+                       s(log(med_bf)) +
+                       s(lat, lon, bs = 'sos', k = 25),
+                     data = nv_peak_data)
+
+# make preds and calc mse and mae
+nv_preds <- predict(nv_gam, nv_gam_data)
+nv_preds_capped <- pmax(nv_preds, 0)
+
+# add preds to predicted data
+nv_gam_data$nv_preds <- nv_preds_capped
+
+# calculate ratios of mults
+ratios_nev <- nv_gam_data |> select(id, huc, nv_preds, ros) |>
+  group_by(id) |>
+  slice(1:2) |>
+  pivot_wider(names_from = ros, values_from = nv_preds) |>
+  filter(nonros > 1 & ros > 1) |>
+  mutate(mult_ratio = ros / nonros)
+
+# visualize ratio of ratios
+ratios_nev |>
+  ggplot(aes(x = mult_ratio)) +
+  geom_density()
+
+summary(ratios_nev$mult_ratio)
