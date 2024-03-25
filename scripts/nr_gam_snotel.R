@@ -202,7 +202,7 @@ ratios <- gam_data |> select(id, huc, gam_preds, ros) |>
 pdf("figures/total_ratios.pdf", height = 6, width = 6)
 ratios |>
   ggplot(aes(x = mult_ratio)) +
-  geom_density()
+  geom_density(bw = 0.075) # smooth it a bit
 dev.off()
 
 summary(ratios$mult_ratio)

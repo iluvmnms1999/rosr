@@ -169,12 +169,12 @@ plot(mod_gam1)
 # without smp
 mod_gam2 <- mgcv::gam(log(mult) ~
                         s(temp_degc_av) +
-                        # s(temp_degc_med) +
+                        s(temp_degc_med) +
                         s(snow_dep_av) +
-                        # s(prec_av) +
+                        s(prec_av) +
                         s(prec_max) +
-                        # s(prec_med) +
-                        # s(prec_sum) +
+                        s(prec_med) +
+                        s(prec_sum) +
                         # s(melt_av) +
                         # s(elev_av) +
                         s(swe_av) +
