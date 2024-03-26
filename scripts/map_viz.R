@@ -103,6 +103,8 @@ huc_sums <- stat_huc |>
   setDT() |>
   st_as_sf()
 
+saveRDS(huc_sums, "data-raw/huc_ros_surgesums.rds")
+
 
 ## choropleth map of # of surges per year in each huc
 ggplot(huc_sums, aes(fill = surge)) +
