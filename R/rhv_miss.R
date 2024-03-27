@@ -206,3 +206,23 @@ tot <- rbind(miss_ca, miss_co, miss_id, miss_mt, miss_nm, miss_nv, miss_or,
              miss_wy, miss_wa, miss_az)
 
 length(unique(tot$id)) #125 stations reported
+
+
+
+
+
+
+
+
+# how many stations were we actually able to get data for? ----------------
+states <- c("NV", "CA", "CO", "ID", "MT", "NM", "OR", "UT", "WA", "AZ", "WY")
+num <- 0
+for (x in seq_along(states)) {
+  # get all streamflow data
+  rhv_tot <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_", states[x], ".RDS"))
+  rhv_miss <- readRDS(paste0("data-raw/rhv_miss/rhv_miss_", states[x], ".RDS"))
+  rhv_all <- rbind(rhv_tot, rhv_miss)
+  data.table::setDT(rhv_all)
+
+  num <- num + length(unique(rhv_all$id))
+}
