@@ -94,7 +94,7 @@ stat_huc <- readRDS("data-raw/por_ros_surge.rds")
 huc_sums <- stat_huc |>
   reframe(surge_prop = surge_count / por,
             ros_prop_tot = ros_count / surge_count,
-            ros_prop_year = ros_prop_tot / por,
+            ros_prop_year = ros_count / por,
             huc8 = huc8,
             geometry = geometry) |>
   group_by(huc8) |>
@@ -105,26 +105,43 @@ huc_sums <- stat_huc |>
   select(-5) |>
   setDT() |>
   st_as_sf()
-#
+
 # saveRDS(huc_sums, "data-raw/huc_ros_surgesums.rds")
 
-huc_sums <- readRDS("data-raw/huc_ros_surgesums.rds")
+# huc_sums <- readRDS("data-raw/huc_ros_surgesums.rds")
 
 ## choropleth map of # of surges per year in each huc
 # help: https://community.appliedepi.org/t/how-to-overlay-a-choropleth-map-on-a-base-map/1365
+pdf("figures/huc_surge_overlay.pdf", height = 4, width = 5)
 ggplot() +
-  geom_sf(data = west, col = "gray30", lwd = .5) +
-  geom_sf(data = huc8_filt, col = "black", alpha = 0.1) +
+  geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
+  geom_sf(data = huc8_filt, col = "gray50", fill = NA) +
   geom_sf(data = huc_sums, aes(fill = log2(surge)), inherit.aes = FALSE) +
-  theme_bw()
-  # ggtitle("Western States with HUC 8 regions overlaid") +
-  # theme(plot.title = element_text(hjust = 0.5))
+  theme_bw() +
+  ggtitle("# eligible surges per year by HUC") +
+  theme(plot.title = element_text(hjust = 0.5))
+dev.off()
 
-## choropleth map of # of ros events in each huc
+## choropleth map of prop of ros surges in each huc
+pdf("figures/huc_rostot_overlay.pdf", height = 4, width = 5)
 ggplot() +
-  geom_sf(data = west, col = "gray30", lwd = .5) +
-  geom_sf(data = huc8_filt, col = "black", alpha = 0.1) +
+  geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
+  geom_sf(data = huc8_filt, col = "gray50", fill = NA) +
+  geom_sf(data = huc_sums, aes(fill = ros_tot), inherit.aes = FALSE) +
+  theme_bw() +
+  scale_fill_gradient(low = "#00441b", high = "#e5f5e0") +
+  ggtitle("prop. of total surges classified as ROS by HUC") +
+  theme(plot.title = element_text(hjust = 0.5))
+dev.off()
+
+## choropleth map of prop of ros surges per year in each huc
+pdf("figures/huc_rosyear_overlay.pdf", height = 4, width = 5)
+ggplot() +
+  geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
+  geom_sf(data = huc8_filt, col = "gray50", fill = NA) +
   geom_sf(data = huc_sums, aes(fill = log2(ros_year)), inherit.aes = FALSE) +
   theme_bw() +
-  scale_fill_gradient(low = "#00441b", high = "#e5f5e0")
-
+  scale_fill_gradient(low = "#00441b", high = "#e5f5e0") +
+  ggtitle("# of surges classified as ROS per year by HUC") +
+  theme(plot.title = element_text(hjust = 0.5))
+dev.off()
