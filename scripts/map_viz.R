@@ -88,33 +88,43 @@ dev.off()
 # saveRDS(stat_huc, "data-raw/por_ros_surge.rds")
 #
 
+stat_huc <- readRDS("data-raw/por_ros_surge.rds")
+
 # summarize by huc
 huc_sums <- stat_huc |>
   reframe(surge_prop = surge_count / por,
-            ros_count = ros_count,
+            ros_prop_tot = ros_count / surge_count,
+            ros_prop_year = ros_prop_tot / por,
             huc8 = huc8,
             geometry = geometry) |>
   group_by(huc8) |>
-  summarize(surge = ifelse(n() == 1, surge_prop, ifelse(n() == 2,
-                           mean(surge_prop), median(surge_prop))),
-            ros = sum(ros_count)) |>
+  summarize(surge = ifelse(n() == 1, surge_prop, median(surge_prop)),
+            ros_tot = mean(ros_prop_tot),
+            ros_year = mean(ros_prop_year)) |>
   left_join(huc8_filt, by = join_by(huc8)) |>
-  select(-4) |>
+  select(-5) |>
   setDT() |>
   st_as_sf()
+#
+# saveRDS(huc_sums, "data-raw/huc_ros_surgesums.rds")
 
-saveRDS(huc_sums, "data-raw/huc_ros_surgesums.rds")
-
+huc_sums <- readRDS("data-raw/huc_ros_surgesums.rds")
 
 ## choropleth map of # of surges per year in each huc
-ggplot(huc_sums, aes(fill = surge)) +
-  geom_sf() +
-  geom_sf(data = west, col = "black", lwd = 1) +
-  geom_sf(data = huc8_filt, col = "blue", alpha = 0.3)
+# help: https://community.appliedepi.org/t/how-to-overlay-a-choropleth-map-on-a-base-map/1365
+ggplot() +
+  geom_sf(data = west, col = "gray30", lwd = .5) +
+  geom_sf(data = huc8_filt, col = "black", alpha = 0.1) +
+  geom_sf(data = huc_sums, aes(fill = log2(surge)), inherit.aes = FALSE) +
+  theme_bw()
+  # ggtitle("Western States with HUC 8 regions overlaid") +
+  # theme(plot.title = element_text(hjust = 0.5))
 
 ## choropleth map of # of ros events in each huc
-huc_sums |>
-  ggplot(aes(fill = ros)) +
-  geom_sf() +
+ggplot() +
+  geom_sf(data = west, col = "gray30", lwd = .5) +
+  geom_sf(data = huc8_filt, col = "black", alpha = 0.1) +
+  geom_sf(data = huc_sums, aes(fill = log2(ros_year)), inherit.aes = FALSE) +
+  theme_bw() +
   scale_fill_gradient(low = "#00441b", high = "#e5f5e0")
 
