@@ -1,0 +1,41 @@
+library(ggplot2)
+library(tidyverse)
+
+# peaks data from melt method before getting rid of invalid observations
+states <- c("NV", "CA", "CO", "ID", "MT", "NM", "OR", "UT", "WA", "AZ", "WY")
+peaks_all <- data.frame()
+for (i in seq_along(states)) {
+  x <- readRDS(paste0("data-raw/ros_class/huc_match/melt_snotel/ge1snotel",
+                      "/add_base_med_ref/ms_baseref_", states[i], ".RDS"))
+  peaks_all <- rbind(peaks_all, x)
+}
+
+# peaks data prepped for modeling
+peaks <- readRDS("data-raw/modeling/peak_data_sf.rds") |>
+  filter(mult > 0)
+
+pdf("figures/ch2/rosdistrcor.pdf", width = 6, height = 6)
+peaks %>%
+  ggplot() +
+  geom_density(aes(x = mult), linetype = 2, color = "gray70") +
+  geom_density(aes(x = mult, color = ros), linewidth = 1.3, show.legend = FALSE) +
+  stat_density(aes(x = mult, color = ros),
+               geom = "line", position = "identity", lwd = 1.3) +
+  scale_x_continuous(trans = scales::log2_trans(),
+                     breaks = scales::trans_breaks("log2", function(x) 2 ^ x, n = 6),
+                     limits = c(1, 2 ^ 12)) +
+  scale_y_continuous(breaks = seq(0, 0.5, 0.1), limits = c(0, 0.5)) +
+  xlab("Surge (cfs, log2-scale)") +
+  ylab("Density") +
+  ggtitle("Flood Distributions of ROS vs non-ROS") +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold")) +
+  scale_color_manual(values = c("#bf812d", "#41ab5d"),
+                     labels = c("non-ros", "ros")) +
+  labs(color = "ROS Class") +
+  theme(legend.position = c(0.875, 0.83),
+                 legend.background = element_blank(),
+                 legend.text = element_text(size = 12),
+                 legend.title = element_text(size = 14)) +
+  theme(axis.text = element_text(size = 12),
+                 axis.title = element_text(size = 14, face = "bold"))
+dev.off()
