@@ -32,6 +32,7 @@ peaks %>%
   scale_color_manual(values = c("#bf812d", "#41ab5d"),
                      labels = c("non-ros", "ros")) +
   labs(color = "ROS Class") +
+  theme_bw() +
   theme(legend.position = c(0.875, 0.83),
                  legend.background = element_blank(),
                  legend.text = element_text(size = 12),

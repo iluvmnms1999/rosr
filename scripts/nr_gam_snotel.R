@@ -199,10 +199,11 @@ ratios <- gam_data |> select(id, huc, gam_preds, ros) |>
   mutate(mult_ratio = ros / nonros)
 
 # visualize ratio of ratios
-pdf("figures/total_ratios.pdf", height = 4, width = 4)
+pdf("figures/ch4/total_ratios.pdf", height = 4, width = 4)
 ratios |>
   ggplot(aes(x = mult_ratio)) +
-  geom_density(bw = 0.075) # smooth it a bit
+  geom_density(bw = 0.075) + # smooth it a bit
+  theme_bw()
 dev.off()
 
 summary(ratios$mult_ratio)
