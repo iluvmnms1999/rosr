@@ -170,7 +170,7 @@ huc_sums <- stat_huc |>
 
 ## choropleth map of # of surges per year in each huc
 # help: https://community.appliedepi.org/t/how-to-overlay-a-choropleth-map-on-a-base-map/1365
-pdf("figures/ch4/huc_surge_overlay.pdf", height = 4, width = 4)
+pdf("figures/ch2/huc_surge_overlay.pdf", height = 4, width = 4)
 ggplot() +
   geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
   geom_sf(data = huc8_filt, col = "gray50", fill = NA) +
@@ -182,7 +182,7 @@ ggplot() +
 dev.off()
 
 ## choropleth map of prop of ros surges in each huc
-pdf("figures/ch4/huc_rostot_overlay.pdf", height = 4, width = 4)
+pdf("figures/ch2/huc_rostot_overlay.pdf", height = 4, width = 4)
 ggplot() +
   geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
   geom_sf(data = huc8_filt, col = "gray50", fill = NA) +
@@ -195,7 +195,7 @@ ggplot() +
 dev.off()
 
 ## choropleth map of prop of ros surges per year in each huc
-pdf("figures/ch4/huc_rosyear_overlay.pdf", height = 4, width = 5)
+pdf("figures/ch2/huc_rosyear_overlay.pdf", height = 4, width = 5)
 ggplot() +
   geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
   geom_sf(data = huc8_filt, col = "gray50", fill = NA) +
