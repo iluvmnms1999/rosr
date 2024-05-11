@@ -160,7 +160,7 @@ mod_gam1 <- mgcv::gam(log(mult) ~
                         s(swe_av) +
                         s(swe_med) + # 62.6
                         s(base_med) +
-                        s(dec_lat_va, dec_long_va, bs = 'sos', k = 100) # increases to 77.1
+                        s(lat, lon, bs = 'sos', k = 100) # increases to 77.1
                       ,
                       data = peak_data_dt)
 summary(mod_gam1)
@@ -184,6 +184,13 @@ mod_gam2 <- mgcv::gam(log(mult) ~
                       ,
                       data = peak_data_dt)
 summary(mod_gam2)
+
+# how many observations are missing snow depth, in which months, and are they ros?
+sd_miss_ros <- peak_data_dt$ros[is.na(peak_data_dt$snow_dep_av)]
+barplot(summary(as.factor(sd_miss_ros)))
+
+sd_miss_month <- peak_data_dt$dt[is.na(peak_data_dt$snow_dep_av)] |> month()
+hist(sd_miss_month)
 
 # 10 fold cross-validation for non-regionalized gam
 gam_nr_preds <- rep(as.numeric(NA), nrow(peak_data_dt))

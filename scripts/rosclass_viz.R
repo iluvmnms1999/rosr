@@ -14,7 +14,8 @@ for (i in seq_along(states)) {
 peaks <- readRDS("data-raw/modeling/peak_data_sf.rds") |>
   filter(mult > 0)
 
-pdf("figures/ch2/rosdistrcor.pdf", width = 6, height = 6)
+## PRESENTATION
+png("figures/ch2/presentation/rosdistrcor.png", width = 5, height = 5, units = "in", res = 250)
 peaks %>%
   ggplot() +
   geom_density(aes(x = mult), linetype = 2, color = "gray70") +
@@ -33,10 +34,11 @@ peaks %>%
                      labels = c("non-ros", "ros")) +
   labs(color = "ROS Class") +
   theme_bw() +
-  theme(legend.position = c(0.875, 0.83),
+  theme(legend.position = c(0.855, 0.84),
                  legend.background = element_blank(),
                  legend.text = element_text(size = 12),
                  legend.title = element_text(size = 14)) +
-  theme(axis.text = element_text(size = 12),
-                 axis.title = element_text(size = 14, face = "bold"))
+  theme(axis.text = element_text(size = 10),
+                 axis.title = element_text(size = 12),
+        plot.title = element_text(hjust = 0.5))
 dev.off()

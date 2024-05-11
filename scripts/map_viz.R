@@ -3,16 +3,19 @@ library(usmap)
 library(sf)
 library(tidyverse)
 library(data.table)
+library(gridExtra)
 
 states <- us_map(regions = "state")
 west <- subset(states, abbr %in% c("NV", "CA", "CO", "ID", "MT", "NM",
                                    "OR", "UT", "WA", "AZ", "WY"))
 # get hucs
-huc8 <- readRDS("data-raw/wbd/ws_huc8_geom.rds")
-huc8_simp <- st_simplify(huc8, dTolerance = 1000)
-huc8_filt <- huc8_simp |>
-  filter(str_detect(states, "NV|CA|CO|ID|MT|NM|OR|UT|WA|AZ|WY") == TRUE)
-huc8_filt$huc8 <- as.double(huc8_filt$huc8)
+# huc8 <- readRDS("data-raw/wbd/ws_huc8_geom.rds")
+# huc8_simp <- st_simplify(huc8, dTolerance = 1000)
+# huc8_filt <- huc8_simp |>
+#   filter(str_detect(states, "NV|CA|CO|ID|MT|NM|OR|UT|WA|AZ|WY") == TRUE)
+# huc8_filt$huc8 <- as.double(huc8_filt$huc8)
+# saveRDS(huc8_filt, "data-raw/huc8_west.rds")
+huc8_west <- readRDS("data-raw/huc8_west.rds")
 
 # get retained peaks
 peaks_ref <- readRDS("data-raw/modeling/peak_data_sf.rds")
@@ -66,31 +69,45 @@ snotel_all <- sf::st_as_sf(snotel_filt, coords = c("lon", "lat"),
 # state outlines with hucs overlaid (specify "data =")
 # https://github.com/tidyverse/ggplot2/issues/2090
 
-## plot western states with huc8 regions and all usgs/snotel stations
-pdf("figures/ch2/states_huc_stations_all.pdf", height = 6, width = 6)
-par(mfrow = c(1, 2))
+# overlay huc regions on states
+png("figures/ch2/presentation/huc_overlay.png", height = 5, width = 5, units = "in", res = 175)
 ggplot() +
-  # geom_sf(data = states, fill = "white", color = "gray") +
   geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
-  geom_sf(data = huc8_filt, col = "gray50", fill = NA) +
-  geom_sf(data = snotel_all, color = "blue", size = 1) +
-  geom_sf(data = peaks_all, color = "red3", size = 1) +
+  geom_sf(data = huc8_west, col = "gray50", fill = NA) +
+  ggtitle("HUC 8 Subbasins Overlaid on Region of Interest") +
   theme_bw() +
   theme(plot.title = element_text(hjust = 0.5))
 dev.off()
 
-## plot western states with huc8 regions and usgs/snotel stations retained
-## because they're in the same hucs
-pdf("figures/ch2/states_huc_stations_filt.pdf", height = 6, width = 6)
-ggplot() +
+
+## PRESENTATION
+png("figures/ch2/presentation/huc_locs_all_filt.png", height = 5, width = 8, units = "in", res = 200)
+## plot western states with huc8 regions and all usgs/snotel stations
+g1 <- ggplot() +
   # geom_sf(data = states, fill = "white", color = "gray") +
   geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
-  geom_sf(data = huc8_filt, col = "gray50", fill = NA) +
-  geom_sf(data = snotel_sf, color = "blue", size = 1) +
-  geom_sf(data = peaks_ref, color = "red3", size = 1) +
+  geom_sf(data = huc8_west, col = "gray50", fill = NA) +
+  geom_sf(data = snotel_all, color = "#5e3c99", size = 1) +
+  geom_sf(data = peaks_all, color = "#fdb863", size = 1) +
+  ggtitle("SNOTEL Stations and Streamgages\nPre-HUC Association") +
   theme_bw() +
   theme(plot.title = element_text(hjust = 0.5))
+
+## plot western states with huc8 regions and usgs/snotel stations retained
+## because they're in the same hucs
+g2 <- ggplot() +
+  # geom_sf(data = states, fill = "white", color = "gray") +
+  geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
+  geom_sf(data = huc8_west, col = "gray50", fill = NA) +
+  geom_sf(data = snotel_sf, color = "#5e3c99", size = 1) +
+  geom_sf(data = peaks_ref, color = "#fdb863", size = 1) +
+  ggtitle("SNOTEL Stations and Streamgages\nPost-HUC Association") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+grid.arrange(g1, g2, nrow = 1)
 dev.off()
+
 
 ## get periods of record
 # which stations do we need period of record for?
@@ -168,30 +185,31 @@ huc_sums <- stat_huc |>
 
 # huc_sums <- readRDS("data-raw/huc_ros_surgesums.rds")
 
+## PRESENTATION
 ## choropleth map of # of surges per year in each huc
 # help: https://community.appliedepi.org/t/how-to-overlay-a-choropleth-map-on-a-base-map/1365
-pdf("figures/ch2/huc_surge_overlay.pdf", height = 4, width = 4)
-ggplot() +
+png("figures/ch2/presentation/huc_surge_ros_overlay.png", height = 5, width = 8, units = "in", res = 200)
+g1 <- ggplot() +
   geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
   geom_sf(data = huc8_filt, col = "gray50", fill = NA) +
   geom_sf(data = huc_sums, aes(fill = log2(surge)), inherit.aes = FALSE) +
   theme_bw() +
-  guides(fill = guide_legend(title = "Surge\n(log2)")) #+
-  # ggtitle("# eligible surges per year by HUC") +
-  # theme(plot.title = element_text(hjust = 0.5))
-dev.off()
+  guides(fill = guide_legend(title = "Surge\n(log2)")) +
+  ggtitle("Number of Surges per Year\nby HUC 8 Region") +
+  theme(plot.title = element_text(hjust = 0.5))
 
 ## choropleth map of prop of ros surges in each huc
-pdf("figures/ch2/huc_rostot_overlay.pdf", height = 4, width = 4)
-ggplot() +
+g2 <- ggplot() +
   geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
   geom_sf(data = huc8_filt, col = "gray50", fill = NA) +
   geom_sf(data = huc_sums, aes(fill = ros_tot), inherit.aes = FALSE) +
   theme_bw() +
   guides(fill = guide_legend(title = "ROS\nProp.")) +
-  scale_fill_gradient(low = "#00441b", high = "#e5f5e0") #+
-  # ggtitle("prop. of total surges classified as ROS by HUC") +
-  # theme(plot.title = element_text(hjust = 0.5))
+  scale_fill_gradient(low = "#00441b", high = "#e5f5e0") +
+  ggtitle("Proportion of Total Surges Classified\nas ROS by HUC 8 Region") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+grid.arrange(g1, g2, nrow = 1)
 dev.off()
 
 ## choropleth map of prop of ros surges per year in each huc

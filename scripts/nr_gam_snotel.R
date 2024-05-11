@@ -198,12 +198,22 @@ ratios <- gam_data |> select(id, huc, gam_preds, ros) |>
   filter(nonros > 1 & ros > 1) |>
   mutate(mult_ratio = ros / nonros)
 
+## PRESENTATION
 # visualize ratio of ratios
-pdf("figures/ch4/total_ratios.pdf", height = 4, width = 4)
+png("figures/ch4/presentation/total_ratios.png", height = 5, width = 6, units = "in", res = 300)
 ratios |>
   ggplot(aes(x = mult_ratio)) +
   geom_density(bw = 0.075) + # smooth it a bit
-  theme_bw()
+  geom_vline(aes(xintercept = median(mult_ratio)), col = "red") +
+  annotate("text", x = 1.45, y = 0, label = "median = 1.164", color = "red", size = 4) +
+  scale_x_continuous(limits = c(0, 2.2), breaks = seq(0, 2.2, 0.2)) +
+  ggtitle("Distribution of ROS Stream Surge Ratio") +
+  xlab("Ratio") +
+  ylab("Density") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        axis.title = element_text(size = 13),
+        axis.text = element_text(size = 10))
 dev.off()
 
 summary(ratios$mult_ratio)
