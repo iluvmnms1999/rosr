@@ -143,6 +143,8 @@ global_mean_mae <- median(abs(log(peak_data_dt$mult) - global_mean_preds), na.rm
 # GAM ---------------------------------------------------------------------
 library(mgcv)
 library(dplyr)
+library(lubridate)
+library(ggplot2)
 
 # load data matrix
 peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf.rds")
@@ -180,7 +182,7 @@ mod_gam2 <- mgcv::gam(log(mult) ~
                         s(swe_av) +
                         s(base_med) +
                         # smp +
-                        s(lat, lon, bs = 'sos', k = 100) # increases to 63.5
+                        s(lat, lon, bs = 'sos', k = 25) # increases to 63.5
                       ,
                       data = peak_data_dt)
 summary(mod_gam2)
@@ -189,8 +191,24 @@ summary(mod_gam2)
 sd_miss_ros <- peak_data_dt$ros[is.na(peak_data_dt$snow_dep_av)]
 barplot(summary(as.factor(sd_miss_ros)))
 
+sum(sd_miss_ros == "non-ros") / length(sd_miss_ros)
+
+# come back to this if you have time
+peak_data_dt |>
+  filter(is.na(snow_dep_av)) |>
+  ggplot(aes(x = as.factor(ros))) +
+  geom_bar() +
+  xlab("ROS Classification") +
+  ylab("Count") +
+  ggtitle("Proportion of Peaks per Month by ROS") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
 sd_miss_month <- peak_data_dt$dt[is.na(peak_data_dt$snow_dep_av)] |> month()
 hist(sd_miss_month)
+
+sum(sd_miss_month %in% c(4:8)) / length(sd_miss_month)
 
 # 10 fold cross-validation for non-regionalized gam
 gam_nr_preds <- rep(as.numeric(NA), nrow(peak_data_dt))
