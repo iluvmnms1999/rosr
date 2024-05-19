@@ -26,6 +26,14 @@ for (x in seq_along(states)) {
   pors_all <- rbind(pors_all, comb)
 }
 
+saveRDS(pors_all, "data-raw/por_comp.rds")
+head(pors_all)
+dim(pors_all)
+
+# subset to just contain pors at gages that reported peaks
+
+# make viz of distribution
+
 
 # figure out workflow
 rhv_tot <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_UT.RDS"))
@@ -38,3 +46,5 @@ rhv_tot[, .(por = difftime(datetime[.N], datetime[1], units = "days") |>
             year_start = year(datetime[1]),
             year_end = year(datetime[.N])),
         by = id]
+
+
