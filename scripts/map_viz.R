@@ -69,6 +69,16 @@ snotel_all <- sf::st_as_sf(snotel_filt, coords = c("lon", "lat"),
 # state outlines with hucs overlaid (specify "data =")
 # https://github.com/tidyverse/ggplot2/issues/2090
 
+# plot states in region of interest
+png("figures/ch2/paper/states.png", height = 5, width = 5, units = "in", res = 175)
+ggplot() +
+  geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
+  # geom_sf(data = huc8_west, col = "gray50", fill = NA) +
+  # ggtitle("Western United States Within Region of Interest") +
+  theme_bw() # +
+  # theme(plot.title = element_text(hjust = 0.5))
+dev.off()
+
 # overlay huc regions on states
 png("figures/ch2/presentation/huc_overlay.png", height = 5, width = 5, units = "in", res = 175)
 ggplot() +
