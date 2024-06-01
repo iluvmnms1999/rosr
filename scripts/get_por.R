@@ -1,8 +1,11 @@
 # libraries
+library(ggplot2)
+library(tidyverse)
+library(gridExtra)
 
 # get all periods of record for all stations
 pors_all <- data.frame()
-states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "WY", "WA", "AZ")
+states <- c("CA", "CO", "ID", "MT", "NM", "NV", "OR", "WY", "WA", "AZ", "UT")
 for (x in seq_along(states)) {
   # read in streamflow data
   rhv_tot <- readRDS(paste0("data-raw/rhv_tot/rhv_tot_", states[x], ".RDS"))
@@ -30,9 +33,31 @@ saveRDS(pors_all, "data-raw/por_comp.rds")
 head(pors_all)
 dim(pors_all)
 
-# subset to just contain pors at gages that reported peaks
+# subset to contain pors at all gages, gages that reported peaks, and
+# gages included in analysis
 
-# make viz of distribution
+# all gages we have data for
+pors_all <- readRDS("data-raw/por_comp.rds")
+hist(pors_all$por)
+hist(pors_all$year_start)
+summary(pors_all$year_end)
+min(pors_all$year_start)
+
+# gages with peaks
+peaks <- readRDS("data-raw/peaks_fin/peaks_base_med_ref.RDS")
+pors_peaks <- pors_all[id %in% unique(peaks$id)]
+2,1
+
+# gages in analysis
+peaks_left <- readRDS("data-raw/modeling/peak_data_sf.rds")
+pors_left <- pors_all[id %in% unique(peaks_left$id)]
+hist(pors_left$por)
+hist(pors_left$year_start)
+hist(pors_left$year_end)
+min(pors_left$year_start)
+
+
+
 
 
 # figure out workflow

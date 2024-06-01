@@ -118,6 +118,49 @@ g2 <- ggplot() +
 grid.arrange(g1, g2, nrow = 1)
 dev.off()
 
+# thanks https://aosmith.rbind.io/2018/07/19/manual-legends-ggplot2/#:~:text=In%20ggplot2%2C%20mappings%20are%20constructed,()%20to%20get%20a%20legend.
+## PAPER
+png("figures/ch2/paper/huc_locs_all_filt_paper.png", height = 5, width = 9,
+    units = "in", res = 200)
+## plot western states with huc8 regions and all usgs/snotel stations
+g1 <- ggplot() +
+  # geom_sf(data = states, fill = "white", color = "gray") +
+  geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
+  geom_sf(data = huc8_west, col = "gray50", fill = NA) +
+  geom_sf(data = snotel_all, color = "#2d004b", size = 0.75, alpha = 0.5) +
+  geom_sf(data = peaks_all, color = "#e08214", size = 0.75, alpha = 0.5) +
+  # ggtitle("SNOTEL Stations and Streamgages\nPre-HUC Association") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+## plot western states with huc8 regions and usgs/snotel stations retained
+## because they're in the same hucs
+g2 <- ggplot() +
+  # geom_sf(data = states, fill = "white", color = "gray") +
+  geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
+  geom_sf(data = huc8_west, col = "gray50", fill = NA) +
+  geom_sf(data = snotel_sf, aes(color = "#2d004b"), size = 0.75, alpha = 0.5,
+          show.legend = "point") +
+  geom_sf(data = peaks_ref, aes(color = "#e08214"), size = 0.75, alpha = 0.25,
+          show.legend = "point") +
+  scale_color_manual(values = c("#2d004b", "#e08214"),
+                     labels = c("SNOTEL", "Streamgage"), name = "") +
+  # scale_color_identity(guide = "legend", labels = c("SNOTEL", "Streamgage")) +
+                     # values = c("#5e3c99", "#fdb863"),
+                     # labels = c("SNOTEL", "Streamgage"),
+                     # name = "Legend") +
+  # # ggtitle("SNOTEL Stations and Streamgages\nPost-HUC Association") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = c(0.83, 0.96),
+        legend.background = element_blank(),
+        legend.text = element_text(size = 8),
+        legend.key.height = unit(0.4, "cm"),
+        legend.key.width = unit(0.2, "cm"))
+
+grid.arrange(g1, g2, nrow = 1)
+dev.off()
+
 
 ## get periods of record
 # which stations do we need period of record for?
@@ -186,7 +229,7 @@ huc_sums <- stat_huc |>
   summarize(surge = ifelse(n() == 1, surge_prop, median(surge_prop)),
             ros_tot = mean(ros_prop_tot),
             ros_year = mean(ros_prop_year)) |>
-  left_join(huc8_filt, by = join_by(huc8)) |>
+  left_join(huc8_west, by = join_by(huc8)) |>
   select(-5) |>
   setDT() |>
   st_as_sf()
@@ -221,6 +264,37 @@ g2 <- ggplot() +
 
 grid.arrange(g1, g2, nrow = 1)
 dev.off()
+
+
+## PAPER
+## choropleth map of # of surges per year in each huc
+# help: https://community.appliedepi.org/t/how-to-overlay-a-choropleth-map-on-a-base-map/1365
+png("figures/ch2/paper/huc_surge_ros_overlay_paper.png", height = 5, width = 9, units = "in", res = 200)
+g1 <- ggplot() +
+  geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
+  geom_sf(data = huc8_west, col = "gray50", fill = NA) +
+  geom_sf(data = huc_sums, aes(fill = log2(surge)), inherit.aes = FALSE) +
+  theme_bw() +
+  guides(fill = guide_legend(title = "Surge\nCount\n(log2)", reverse = TRUE)) +
+  scale_fill_gradient(breaks = waiver(), n.breaks = 6, low = "#deebf7", high = "#08306b") +
+  # ggtitle("Number of Surges per Year\nby HUC 8 Region") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+## choropleth map of prop of ros surges in each huc
+g2 <- ggplot() +
+  geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
+  geom_sf(data = huc8_west, col = "gray50", fill = NA) +
+  geom_sf(data = huc_sums, aes(fill = ros_tot), inherit.aes = FALSE) +
+  theme_bw() +
+  guides(fill = guide_legend(title = "ROS\nProp.", reverse = TRUE)) +
+  scale_fill_gradient(low = "#e5f5e0", high = "#00441b") +
+  # ggtitle("Proportion of Total Surges Classified\nas ROS by HUC 8 Region") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+grid.arrange(g1, g2, nrow = 1)
+dev.off()
+
+
 
 ## choropleth map of prop of ros surges per year in each huc
 pdf("figures/ch2/huc_rosyear_overlay.pdf", height = 4, width = 5)
