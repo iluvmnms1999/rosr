@@ -127,8 +127,8 @@ g1 <- ggplot() +
   # geom_sf(data = states, fill = "white", color = "gray") +
   geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
   geom_sf(data = huc8_west, col = "gray50", fill = NA) +
-  geom_sf(data = snotel_all, color = "#2d004b", size = 0.75, alpha = 0.5) +
-  geom_sf(data = peaks_all, color = "#e08214", size = 0.75, alpha = 0.5) +
+  geom_sf(data = peaks_all, color = "#e08214", size = 1.5, alpha = 0.25, shape = 1) +
+  geom_sf(data = snotel_all, color = "#2d004b", size = 1.5, alpha = 0.5, shape = 3) +
   # ggtitle("SNOTEL Stations and Streamgages\nPre-HUC Association") +
   theme_bw() +
   theme(plot.title = element_text(hjust = 0.5))
@@ -139,10 +139,8 @@ g2 <- ggplot() +
   # geom_sf(data = states, fill = "white", color = "gray") +
   geom_sf(data = west, col = "black", fill = "gray95", lwd = .5) +
   geom_sf(data = huc8_west, col = "gray50", fill = NA) +
-  geom_sf(data = snotel_sf, aes(color = "#2d004b"), size = 0.75, alpha = 0.5,
-          show.legend = "point") +
-  geom_sf(data = peaks_ref, aes(color = "#e08214"), size = 0.75, alpha = 0.25,
-          show.legend = "point") +
+  geom_sf(data = peaks_ref, aes(color = "#e08214"), size = 1.5, alpha = 0.25, shape = 1) +
+  geom_sf(data = snotel_sf, aes(color = "#2d004b"), size = 1.5, alpha = 0.5, shape = 3) +
   scale_color_manual(values = c("#2d004b", "#e08214"),
                      labels = c("SNOTEL", "Streamgage"), name = "") +
   # scale_color_identity(guide = "legend", labels = c("SNOTEL", "Streamgage")) +
@@ -150,6 +148,7 @@ g2 <- ggplot() +
                      # labels = c("SNOTEL", "Streamgage"),
                      # name = "Legend") +
   # # ggtitle("SNOTEL Stations and Streamgages\nPost-HUC Association") +
+  guides(color = guide_legend(override.aes = list(shape = c(3, 1)))) +
   theme_bw() +
   theme(plot.title = element_text(hjust = 0.5),
         legend.position = c(0.83, 0.96),
