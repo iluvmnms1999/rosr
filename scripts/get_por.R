@@ -17,10 +17,10 @@ for (x in seq_along(states)) {
 
   # calculate por
   pors <- rhv_all[, .(por = difftime(datetime[.N], datetime[1], units = "days") |>
-                as.numeric() / 365,
-              year_start = year(datetime[1]),
-              year_end = year(datetime[.N])),
-          by = id]
+                        as.numeric() / 365,
+                      year_start = year(datetime[1]),
+                      year_end = year(datetime[.N])),
+                  by = id]
 
   # combine with state abb
   comb <- cbind(rep(states[x], nrow(pors)), pors)
@@ -46,7 +46,27 @@ min(pors_all$year_start)
 # gages with peaks
 peaks <- readRDS("data-raw/peaks_fin/peaks_base_med_ref.RDS")
 pors_peaks <- pors_all[id %in% unique(peaks$id)]
-2,1
+png("figures/ch2/paper/por_peaks.png", width = 6, height = 3, units = "in", res = 300)
+# histogram of por length
+g1 <- pors_peaks |>
+  ggplot(aes(x = por)) +
+  geom_histogram(bins = 15, col = "gray", fill = "#023E8A", ) +
+  xlab("Length of Period of Record (in years)") +
+  ylab("Count") +
+  scale_x_continuous(limits = c(0, 50)) +
+  theme_bw()
+# histogram of start year
+g2 <- pors_peaks |>
+  ggplot(aes(x = year_start)) +
+  geom_histogram(bins = 15, col = "gray", fill = "#023E8A", ) +
+  xlab("Period of Record Start Year") +
+  ylab("Count") +
+  scale_x_continuous(limits = c(1980, 2025), breaks = seq(1980, 2025, 5)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust=1),
+        panel.grid.minor.x = element_blank())
+grid.arrange(g1, g2, ncol = 2)
+dev.off()
 
 # gages in analysis
 peaks_left <- readRDS("data-raw/modeling/peak_data_sf.rds")
@@ -55,6 +75,27 @@ hist(pors_left$por)
 hist(pors_left$year_start)
 hist(pors_left$year_end)
 min(pors_left$year_start)
+png("figures/ch2/paper/por_left.png", width = 6, height = 3, units = "in", res = 300)
+# histogram of por length
+g1 <- pors_left |>
+  ggplot(aes(x = por)) +
+  geom_histogram(bins = 15, col = "gray", fill = "#023E8A", ) +
+  xlab("Length of Period of Record (in years)") +
+  ylab("Count") +
+  scale_x_continuous(limits = c(0, 50)) +
+  theme_bw()
+# histogram of start year
+g2 <- pors_left |>
+  ggplot(aes(x = year_start)) +
+  geom_histogram(bins = 15, col = "gray", fill = "#023E8A", ) +
+  xlab("Period of Record Start Year") +
+  ylab("Count") +
+  scale_x_continuous(limits = c(1980, 2025), breaks = seq(1980, 2025, 5)) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust=1),
+        panel.grid.minor.x = element_blank())
+grid.arrange(g1, g2, ncol = 2)
+dev.off()
 
 
 
