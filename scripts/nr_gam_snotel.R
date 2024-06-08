@@ -11,7 +11,7 @@ form_lst <- list(
   log(mult) ~
     s(temp_degc_av) +
     s(temp_degc_med) +
-    s(snow_dep_av) +
+    # s(snow_dep_av) +
     s(prec_av) +
     s(prec_max) +
     s(prec_med) +
@@ -24,7 +24,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
     s(temp_degc_av) +
-    s(snow_dep_av) +
+    # s(snow_dep_av) +
     s(prec_av) +
     # s(melt_av) +
     # s(elev_av) +
@@ -34,7 +34,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
     s(temp_degc_med) +
-    s(snow_dep_av) +
+    # s(snow_dep_av) +
     s(prec_av) +
     # s(melt_av) +
     # s(elev_av) +
@@ -44,7 +44,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
     s(temp_degc_av) +
-    s(snow_dep_av) +
+    # s(snow_dep_av) +
     s(prec_max) +
     # s(melt_av) +
     # s(elev_av) +
@@ -54,7 +54,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
     s(temp_degc_med) +
-    s(snow_dep_av) +
+    # s(snow_dep_av) +
     s(prec_max) +
     # s(melt_av) +
     # s(elev_av) +
@@ -64,7 +64,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
     s(temp_degc_av) +
-    s(snow_dep_av) +
+    # s(snow_dep_av) +
     s(prec_sum) +
     # s(melt_av) +
     # s(elev_av) +
@@ -74,7 +74,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
     s(temp_degc_med) +
-    s(snow_dep_av) +
+    # s(snow_dep_av) +
     s(prec_sum) +
     # s(melt_av) +
     # s(elev_av) +
@@ -84,7 +84,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
     s(temp_degc_av) +
-    s(snow_dep_av) +
+    # s(snow_dep_av) +
     s(prec_med) +
     # s(melt_av) +
     # s(elev_av) +
@@ -94,7 +94,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
     s(temp_degc_med) +
-    s(snow_dep_av) +
+    # s(snow_dep_av) +
     s(prec_med) +
     # s(melt_av) +
     # s(elev_av) +

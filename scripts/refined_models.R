@@ -127,6 +127,9 @@ peaks_sf <- sf::st_as_sf(peaks_cv, coords = c("dec_long_va", "dec_lat_va"),
 saveRDS(peaks_sf, "data-raw/modeling/peak_data_sf.rds")
 
 # Baseline model (nothing) ------------------------------------------------
+# load data matrix
+peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf.rds")
+
 # 10 fold cross-validation for non-regionalized gam
 global_mean_preds <- rep(as.numeric(NA), nrow(peak_data_dt))
 for (i in 1:10) {
@@ -143,8 +146,6 @@ global_mean_mae <- median(abs(log(peak_data_dt$mult) - global_mean_preds), na.rm
 # GAM ---------------------------------------------------------------------
 library(mgcv)
 library(dplyr)
-library(lubridate)
-library(ggplot2)
 
 # load data matrix
 peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf.rds")
@@ -168,11 +169,16 @@ mod_gam1 <- mgcv::gam(log(mult) ~
 summary(mod_gam1)
 plot(mod_gam1)
 
+# replace NA snow depth with 0
+peak_mod_sd <- peak_data_dt
+peak_mod_sd <- peak_mod_sd %>%
+  mutate(across(matches("snow_dep"), ~replace(., is.na(.), 0)))
+
 # without smp
 mod_gam2 <- mgcv::gam(log(mult) ~
                         s(temp_degc_av) +
                         s(temp_degc_med) +
-                        s(snow_dep_av) +
+                        # s(snow_dep_av) +
                         s(prec_av) +
                         s(prec_max) +
                         s(prec_med) +
@@ -187,28 +193,31 @@ mod_gam2 <- mgcv::gam(log(mult) ~
                       data = peak_data_dt)
 summary(mod_gam2)
 
+# getting r^2 for each combo
+mod_gam2 <- mgcv::gam(log(mult) ~
+                        s(temp_degc_av) +
+                        # s(temp_degc_med) +
+                        # s(snow_dep_av) +
+                        # s(prec_av) +
+                        # s(prec_max) +
+                        s(prec_med) +
+                        # s(prec_sum) +
+                        # s(melt_av) +
+                        # s(elev_av) +
+                        s(swe_av) +
+                        s(base_med) +
+                        # smp +
+                        s(lat, lon, bs = 'sos', k = 25) # increases to 63.5
+                      ,
+                      data = peak_data_dt)
+summary(mod_gam2)
+
 # how many observations are missing snow depth, in which months, and are they ros?
 sd_miss_ros <- peak_data_dt$ros[is.na(peak_data_dt$snow_dep_av)]
 barplot(summary(as.factor(sd_miss_ros)))
 
-sum(sd_miss_ros == "non-ros") / length(sd_miss_ros)
-
-# come back to this if you have time
-peak_data_dt |>
-  filter(is.na(snow_dep_av)) |>
-  ggplot(aes(x = as.factor(ros))) +
-  geom_bar() +
-  xlab("ROS Classification") +
-  ylab("Count") +
-  ggtitle("Proportion of Peaks per Month by ROS") +
-  theme_bw() +
-  theme(plot.title = element_text(hjust = 0.5))
-
-
 sd_miss_month <- peak_data_dt$dt[is.na(peak_data_dt$snow_dep_av)] |> month()
 hist(sd_miss_month)
-
-sum(sd_miss_month %in% c(4:8)) / length(sd_miss_month)
 
 # 10 fold cross-validation for non-regionalized gam
 gam_nr_preds <- rep(as.numeric(NA), nrow(peak_data_dt))

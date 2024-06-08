@@ -290,7 +290,7 @@ g2 <- ggplot() +
   # ggtitle("Proportion of Total Surges Classified\nas ROS by HUC 8 Region") +
   theme(plot.title = element_text(hjust = 0.5))
 
-grid.arrange(g1, g2, nrow = 1)
+grid.arrange(g1, g2, nrow = 1, widths = c(.4925, .5075))
 dev.off()
 
 

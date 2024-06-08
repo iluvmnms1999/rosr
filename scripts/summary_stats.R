@@ -50,7 +50,8 @@ dev.off()
 png("figures/ch2/paper/ss_month_props_paper.png", width = 5, height = 4, units = "in", res = 300)
 ggplot(month_counts, aes(x = as.factor(month), y = count_prop, group = ros,
                          color = ros)) +
-  geom_path(lwd = 1) +
+  geom_path(lwd = 0.9) +
+  geom_point() +
   xlab("Month") +
   ylab("Proportion of Peaks") +
   scale_y_continuous(limits = c(0, 0.4)) +
@@ -64,59 +65,84 @@ ggplot(month_counts, aes(x = as.factor(month), y = count_prop, group = ros,
         legend.key = element_blank())
 dev.off()
 
-# looking at distributions of important variables from GAM
-png("figures/ch2/mean_temp_comp.png", width = 5, height = 4, units = "in", res = 200)
-ggplot(peaks, aes(x = temp_degc_av)) +
-  geom_density() +
-  facet_wrap(~ ros) # +
-  # xlab("Month") +
-  # ylab("Proportion of Peaks") +
+## PAPER
+# looking at distributions of important variables (temp, swe, precip)
+png("figures/ch2/var_sums.png", width = 5, height = 10, units = "in", res = 200)
+g1 <- peaks |>
+  ggplot() +
+  stat_density(aes(x = temp_degc_av, color = ros),
+               geom = "line", position = "identity", lwd = 1) +
+  scale_color_manual(values = c("#bf812d", "#41ab5d"),
+                     labels = c("Non-ROS", "ROS"),
+                     guide = guide_legend(override.aes = list(linetype = c("solid", "solid"),
+                                                              lwd = c(1, 1)))) +
+  xlab("Temperature") +
+  ylab("Density") +
+  scale_x_continuous(limits = c(-10, 20), breaks = seq(-10, 20, 5)) +
+  scale_y_continuous(limits = c(0, 0.2)) +
   # ggtitle("Proportion of Peaks per Month by ROS") +
-  # theme_bw() +
-  # theme(plot.title = element_text(hjust = 0.5))
-dev.off()
+  theme_bw() +
+  theme(legend.position = c(0.842, 0.88),
+        legend.background = element_blank(),
+        legend.text = element_text(size = 10),
+        legend.title = element_blank(),
+        legend.key=element_blank(),
+        panel.grid.minor = element_blank())
 
-png("figures/ch2/mean_snowdep_comp.png", width = 5, height = 4, units = "in", res = 200)
-ggplot(peaks, aes(x = snow_dep_av)) +
-  geom_density() +
-  facet_wrap(~ ros) # +
-  # xlab("Month") +
-  # ylab("Proportion of Peaks") +
+g2 <- peaks |>
+  ggplot() +
+  stat_density(aes(x = prec_max, color = ros),
+               geom = "line", position = "identity", lwd = 1, show.legend = FALSE) +
+  scale_color_manual(values = c("#bf812d", "#41ab5d")) +
+  xlab("Precipitation") +
+  ylab("Density") +
+  scale_x_continuous(limits = c(0, 200), breaks = seq(0, 200, 50)) +
+  scale_y_continuous(limits = c(0, 0.08)) +
   # ggtitle("Proportion of Peaks per Month by ROS") +
-  # theme_bw() +
-  # theme(plot.title = element_text(hjust = 0.5))
+  theme_bw() +
+  theme(panel.grid.minor = element_blank())
+
+g3 <- peaks |>
+  ggplot() +
+  stat_density(aes(x = swe_av, color = ros),
+               geom = "line", position = "identity", lwd = 1, show.legend = FALSE) +
+  scale_color_manual(values = c("#bf812d", "#41ab5d")) +
+  xlab("SWE") +
+  ylab("Density") +
+  scale_x_continuous(limits = c(0, 1000), breaks = seq(0, 1000, 250)) +
+  scale_y_continuous(limits = c(0, 0.008)) +
+  # ggtitle("Proportion of Peaks per Month by ROS") +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank())
+
+grid.arrange(g1, g2, g3, nrow = 3)
 dev.off()
 
-png("figures/ch2/max_prec_comp.png", width = 5, height = 4, units = "in", res = 200)
-ggplot(peaks, aes(x = prec_max)) +
-  geom_density() +
-  facet_wrap(~ ros) # +
-# xlab("Month") +
-# ylab("Proportion of Peaks") +
-# ggtitle("Proportion of Peaks per Month by ROS") +
-# theme_bw() +
-# theme(plot.title = element_text(hjust = 0.5))
-dev.off()
 
-png("figures/ch2/mean_swe_comp.png", width = 5, height = 4, units = "in", res = 200)
-ggplot(peaks, aes(x = swe_av)) +
-  geom_density() +
-  facet_wrap(~ ros) # +
-# xlab("Month") +
-# ylab("Proportion of Peaks") +
-# ggtitle("Proportion of Peaks per Month by ROS") +
-# theme_bw() +
-# theme(plot.title = element_text(hjust = 0.5))
-dev.off()
+## looking at distribution of empirical surge ratios
+emp_surge <- peaks |>
+  group_by(id, ros) |>
+  summarize(med_surge = median(mult),
+            count = n()) |>
+  pivot_wider(names_from = "ros", values_from = c("med_surge", "count")) |>
+  filter(`count_non-ros` >= 2, count_ros >= 2) |>
+  mutate(emp_rat = med_surge_ros / `med_surge_non-ros`)
 
-png("figures/ch2/mean_baseflow_comp.png", width = 5, height = 4, units = "in", res = 200)
-ggplot(peaks, aes(x = base_med)) +
-  geom_density() +
-  facet_wrap(~ ros) # +
-# xlab("Month") +
-# ylab("Proportion of Peaks") +
-# ggtitle("Proportion of Peaks per Month by ROS") +
-# theme_bw() +
-# theme(plot.title = element_text(hjust = 0.5))
+## PAPER
+png("figures/ch2/paper/emp_ratios.png", height = 5, width = 6, units = "in", res = 300)
+emp_surge |>
+  ggplot(aes(x = emp_rat)) +
+  geom_density(bw = 0.075) + # smooth it a bit
+  # geom_vline(aes(xintercept = median(emp_rat)), col = "red") +
+  # annotate("text", x = 1.45, y = 0, label = "median = 1.164", color = "red", size = 4) +
+  scale_x_continuous(limits = c(0, 2.2), breaks = seq(0, 2.2, 0.2)) +
+  scale_y_continuous(limits = c(0, 1.25)) +
+  ggtitle("Distribution of Empirical Stream Surge Ratios") +
+  xlab("Ratio") +
+  ylab("Density") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        axis.title = element_text(size = 13),
+        axis.text = element_text(size = 10),
+        panel.grid.minor = element_blank())
 dev.off()
-
