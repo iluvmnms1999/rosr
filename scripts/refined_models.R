@@ -186,7 +186,7 @@ mod_gam2 <- mgcv::gam(log(mult) ~
                         # s(melt_av) +
                         # s(elev_av) +
                         s(swe_av) +
-                        s(base_med) +
+                        s(log(base_med)) +
                         # smp +
                         s(lat, lon, bs = 'sos', k = 25) # increases to 63.5
                       ,
@@ -199,13 +199,13 @@ mod_gam2 <- mgcv::gam(log(mult) ~
                         # s(temp_degc_med) +
                         # s(snow_dep_av) +
                         # s(prec_av) +
-                        # s(prec_max) +
-                        s(prec_med) +
+                        s(prec_max) +
+                        # s(prec_med) +
                         # s(prec_sum) +
                         # s(melt_av) +
                         # s(elev_av) +
                         s(swe_av) +
-                        s(base_med) +
+                        s(log(base_med)) +
                         # smp +
                         s(lat, lon, bs = 'sos', k = 25) # increases to 63.5
                       ,

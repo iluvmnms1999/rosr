@@ -19,7 +19,7 @@ form_lst <- list(
     # s(melt_av) +
     # s(elev_av) +
     s(swe_av) +
-    s(base_med) +
+    s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
@@ -29,7 +29,7 @@ form_lst <- list(
     # s(melt_av) +
     # s(elev_av) +
     s(swe_av) +
-    s(base_med) +
+    s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
@@ -39,7 +39,7 @@ form_lst <- list(
     # s(melt_av) +
     # s(elev_av) +
     s(swe_av) +
-    s(base_med) +
+    s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
@@ -49,7 +49,7 @@ form_lst <- list(
     # s(melt_av) +
     # s(elev_av) +
     s(swe_av) +
-    s(base_med) +
+    s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
@@ -59,7 +59,7 @@ form_lst <- list(
     # s(melt_av) +
     # s(elev_av) +
     s(swe_av) +
-    s(base_med) +
+    s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
@@ -69,7 +69,7 @@ form_lst <- list(
     # s(melt_av) +
     # s(elev_av) +
     s(swe_av) +
-    s(base_med) +
+    s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
@@ -79,7 +79,7 @@ form_lst <- list(
     # s(melt_av) +
     # s(elev_av) +
     s(swe_av) +
-    s(base_med) +
+    s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
@@ -89,7 +89,7 @@ form_lst <- list(
     # s(melt_av) +
     # s(elev_av) +
     s(swe_av) +
-    s(base_med) +
+    s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~
@@ -99,7 +99,7 @@ form_lst <- list(
     # s(melt_av) +
     # s(elev_av) +
     s(swe_av) +
-    s(base_med) +
+    s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25)
 )
@@ -166,18 +166,19 @@ peak_data_dt %>% # median overall by location
 # define model and train model on profiles
 gam_data <- readRDS("data-raw/modeling/gam_datav2.rds")
 
-
 # reformat peak data so we have the same variables
 data.table::setDT(peak_data_dt)
 peak_data <- peak_data_dt[, .(id, dt, mult, huc, med_bf = base_med, lat, lon,
-                              ros, snowdep = snow_dep_av, prec_med = prec_max,
+                              ros,
+                              # snowdep = snow_dep_av,
+                              prec = prec_max,
                               swe = swe_av, temp = temp_degc_av)]
 
 # fit gam
 gam_obj <- mgcv::gam(log(mult) ~
                        s(temp) +
-                       s(snowdep) +
-                       s(prec_med) +
+                       # s(snowdep) +
+                       s(prec) +
                        s(swe) +
                        s(log(med_bf)) +
                        s(lat, lon, bs = 'sos', k = 25),
