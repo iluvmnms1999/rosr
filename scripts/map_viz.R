@@ -153,7 +153,7 @@ g2 <- ggplot() +
   theme(plot.title = element_text(hjust = 0.5),
         legend.position = c(0.83, 0.96),
         legend.background = element_blank(),
-        legend.text = element_text(size = 8),
+        legend.text = element_text(size = 11),
         legend.key.height = unit(0.4, "cm"),
         legend.key.width = unit(0.2, "cm"))
 
