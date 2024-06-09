@@ -274,8 +274,9 @@ g1 <- ggplot() +
   geom_sf(data = huc8_west, col = "gray50", fill = NA) +
   geom_sf(data = huc_sums, aes(fill = log2(surge)), inherit.aes = FALSE) +
   theme_bw() +
-  guides(fill = guide_legend(title = "Surge\nCount\n(log2)", reverse = TRUE)) +
-  scale_fill_gradient(breaks = waiver(), n.breaks = 6, low = "#deebf7", high = "#08306b") +
+  guides(fill = guide_legend(title = "Surge\nCount", reverse = TRUE)) +
+  scale_fill_gradient(breaks = waiver(), n.breaks = 6, low = "#deebf7", high = "#08306b",
+                      labels = rev(c(4, 2, 1, 0.5, 0.25, 0.13, 0.06, 0.03))) +
   # ggtitle("Number of Surges per Year\nby HUC 8 Region") +
   theme(plot.title = element_text(hjust = 0.5))
 
@@ -290,7 +291,7 @@ g2 <- ggplot() +
   # ggtitle("Proportion of Total Surges Classified\nas ROS by HUC 8 Region") +
   theme(plot.title = element_text(hjust = 0.5))
 
-grid.arrange(g1, g2, nrow = 1, widths = c(.4925, .5075))
+grid.arrange(g1, g2, nrow = 1, widths = c(.499, .501))
 dev.off()
 
 
