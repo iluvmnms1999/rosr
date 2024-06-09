@@ -178,7 +178,7 @@ peak_mod_sd <- peak_mod_sd %>%
 mod_gam2 <- mgcv::gam(log(mult) ~
                         s(temp_degc_av) +
                         s(temp_degc_med) +
-                        # s(snow_dep_av) +
+                        s(snow_dep_av) +
                         s(prec_av) +
                         s(prec_max) +
                         s(prec_med) +
@@ -190,14 +190,14 @@ mod_gam2 <- mgcv::gam(log(mult) ~
                         # smp +
                         s(lat, lon, bs = 'sos', k = 25) # increases to 63.5
                       ,
-                      data = peak_data_dt)
+                      data = peak_mod_sd)
 summary(mod_gam2)
 
 # getting r^2 for each combo
 mod_gam2 <- mgcv::gam(log(mult) ~
                         s(temp_degc_av) +
                         # s(temp_degc_med) +
-                        # s(snow_dep_av) +
+                        s(snow_dep_av) +
                         # s(prec_av) +
                         s(prec_max) +
                         # s(prec_med) +
@@ -209,7 +209,7 @@ mod_gam2 <- mgcv::gam(log(mult) ~
                         # smp +
                         s(lat, lon, bs = 'sos', k = 25) # increases to 63.5
                       ,
-                      data = peak_data_dt)
+                      data = peak_mod_sd)
 summary(mod_gam2)
 
 # how many observations are missing snow depth, in which months, and are they ros?

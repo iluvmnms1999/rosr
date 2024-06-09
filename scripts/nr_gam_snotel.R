@@ -8,7 +8,7 @@ library(tidyverse)
 peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf.rds")
 
 form_lst <- list(
-  log(mult) ~
+  log(mult) ~ #1
     s(temp_degc_av) +
     s(temp_degc_med) +
     # s(snow_dep_av) +
@@ -22,7 +22,7 @@ form_lst <- list(
     s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
-  log(mult) ~
+  log(mult) ~ #2
     s(temp_degc_av) +
     # s(snow_dep_av) +
     s(prec_av) +
@@ -32,7 +32,7 @@ form_lst <- list(
     s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
-  log(mult) ~
+  log(mult) ~ #3
     s(temp_degc_med) +
     # s(snow_dep_av) +
     s(prec_av) +
@@ -42,7 +42,7 @@ form_lst <- list(
     s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
-  log(mult) ~
+  log(mult) ~ #4
     s(temp_degc_av) +
     # s(snow_dep_av) +
     s(prec_max) +
@@ -52,7 +52,7 @@ form_lst <- list(
     s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
-  log(mult) ~
+  log(mult) ~ #5
     s(temp_degc_med) +
     # s(snow_dep_av) +
     s(prec_max) +
@@ -62,7 +62,7 @@ form_lst <- list(
     s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
-  log(mult) ~
+  log(mult) ~ #6
     s(temp_degc_av) +
     # s(snow_dep_av) +
     s(prec_sum) +
@@ -72,7 +72,7 @@ form_lst <- list(
     s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
-  log(mult) ~
+  log(mult) ~ #7
     s(temp_degc_med) +
     # s(snow_dep_av) +
     s(prec_sum) +
@@ -82,7 +82,7 @@ form_lst <- list(
     s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
-  log(mult) ~
+  log(mult) ~ #8
     s(temp_degc_av) +
     # s(snow_dep_av) +
     s(prec_med) +
@@ -92,7 +92,7 @@ form_lst <- list(
     s(log(base_med)) +
     # smp +
     s(lat, lon, bs = 'sos', k = 25),
-  log(mult) ~
+  log(mult) ~ #9
     s(temp_degc_med) +
     # s(snow_dep_av) +
     s(prec_med) +
@@ -164,21 +164,28 @@ peak_data_dt %>% # median overall by location
 
 # run gam on each gage ----------------------------------------------------
 # define model and train model on profiles
-gam_data <- readRDS("data-raw/modeling/gam_datav2.rds")
+gam_data <- readRDS("data-raw/modeling/gam_data_swehalved.rds")
+
+# replace NA snow depth with 0 when swe is 0
+peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf.rds")
+ind <- which(peak_data_dt$swe_av == 0 & is.na(peak_data_dt$snow_dep_av))
+peak_data_dt$snow_dep_av[ind] <- 0
+# peak_data_dt[peak_data_dt$swe_av == 0,] %>%
+#   mutate(across(matches("snow_dep"), ~replace(., is.na(.), 0)))
 
 # reformat peak data so we have the same variables
 data.table::setDT(peak_data_dt)
 peak_data <- peak_data_dt[, .(id, dt, mult, huc, med_bf = base_med, lat, lon,
                               ros,
-                              # snowdep = snow_dep_av,
-                              prec = prec_max,
+                              snowdep = snow_dep_av,
+                              prec_med = prec_max,
                               swe = swe_av, temp = temp_degc_av)]
 
 # fit gam
 gam_obj <- mgcv::gam(log(mult) ~
                        s(temp) +
-                       # s(snowdep) +
-                       s(prec) +
+                       s(snowdep) +
+                       s(prec_med) +
                        s(swe) +
                        s(log(med_bf)) +
                        s(lat, lon, bs = 'sos', k = 25),
@@ -218,6 +225,37 @@ ratios |>
 dev.off()
 
 summary(ratios$mult_ratio)
+
+
+## PAPER
+# visualize ratio of ratios
+png("figures/ch3/paper/total_ratios.png", height = 5, width = 6, units = "in", res = 300)
+ratios |>
+  ggplot(aes(x = mult_ratio)) +
+  geom_density(bw = 0.075) + # smooth it a bit
+  geom_vline(aes(xintercept = median(mult_ratio)), col = "red") +
+  annotate("text", x = 1.45, y = 0, label = "median = 1.477", color = "red", size = 4) +
+  scale_x_continuous(limits = c(0, 2.2), breaks = seq(0, 2.2, 0.2)) +
+  ggtitle("Distribution of ROS Stream Surge Ratio") +
+  xlab("Ratio") +
+  ylab("Density") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5, size = 15),
+        axis.title = element_text(size = 13),
+        axis.text = element_text(size = 10),
+        panel.grid.minor = element_blank())
+dev.off()
+
+summary(ratios$mult_ratio)
+
+
+
+
+
+
+
+
+
 
 # just look at nevada ratios trained on all data
 ws <- readRDS("data-raw/wbd/ws_huc8_geom.rds")
@@ -277,20 +315,20 @@ data.table::setDT(peak_data_dt)
 nv_peaks <- peak_data_dt[huc %in% nv_hucs] # left$`nv_hucs$huc8`
 data.table::setDT(nv_peaks)
 nv_peak_data <- nv_peaks[, .(id, dt, mult, huc, med_bf = base_med, lat, lon,
-                              ros, snowdep = snow_dep_av, prec = prec_max,
-                              swe = swe_av, temp = temp_degc_av)]
+                             ros, snowdep = snow_dep_av, prec = prec_max,
+                             swe = swe_av, temp = temp_degc_av)]
 
 nv_gam_data <- gam_data[id %in% unique(nv_peak_data$id)]
 
 # fit gam
 nv_gam <- mgcv::gam(log(mult) ~
-                       s(temp) +
-                       s(snowdep) +
-                       s(prec) +
-                       s(swe) +
-                       s(log(med_bf)) +
-                       s(lat, lon, bs = 'sos', k = 25),
-                     data = nv_peak_data)
+                      s(temp) +
+                      s(snowdep) +
+                      s(prec) +
+                      s(swe) +
+                      s(log(med_bf)) +
+                      s(lat, lon, bs = 'sos', k = 25),
+                    data = nv_peak_data)
 
 # make preds and calc mse and mae
 nv_preds <- predict(nv_gam, nv_gam_data)

@@ -2,6 +2,8 @@
 library(ggplot2)
 library(tidyverse)
 library(gridExtra)
+library(gtable)
+library(grid)
 
 # get all periods of record for all stations
 pors_all <- data.frame()
@@ -65,7 +67,12 @@ g2 <- pors_peaks |>
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust=1),
         panel.grid.minor.x = element_blank())
-grid.arrange(g1, g2, ncol = 2)
+g1 <- ggplotGrob(g1)
+g2 <- ggplotGrob(g2)
+g <- cbind(g1, g2, size = "first")
+g$heights <- unit.pmax(g1$heights, g2$heights)
+grid.newpage()
+grid.draw(g)
 dev.off()
 
 # gages in analysis
@@ -94,7 +101,12 @@ g2 <- pors_left |>
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust=1),
         panel.grid.minor.x = element_blank())
-grid.arrange(g1, g2, ncol = 2)
+g1 <- ggplotGrob(g1)
+g2 <- ggplotGrob(g2)
+g <- cbind(g1, g2, size = "first")
+g$heights <- unit.pmax(g1$heights, g2$heights)
+grid.newpage()
+grid.draw(g)
 dev.off()
 
 
