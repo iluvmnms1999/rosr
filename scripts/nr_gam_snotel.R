@@ -214,6 +214,7 @@ ratios |>
   geom_density(bw = 0.075) + # smooth it a bit
   geom_vline(aes(xintercept = median(mult_ratio)), col = "red") +
   annotate("text", x = 1.45, y = 0, label = "median = 1.164", color = "red", size = 4) +
+  # add mean
   scale_x_continuous(limits = c(0, 2.2), breaks = seq(0, 2.2, 0.2)) +
   ggtitle("Distribution of ROS Stream Surge Ratio") +
   xlab("Ratio") +

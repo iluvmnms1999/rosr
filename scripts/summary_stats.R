@@ -67,7 +67,7 @@ dev.off()
 
 ## PAPER
 # looking at distributions of important variables (temp, swe, precip)
-png("figures/ch2/var_sums.png", width = 5, height = 10, units = "in", res = 200)
+png("figures/ch2/paper/var_sums.png", width = 5, height = 10, units = "in", res = 200)
 g1 <- peaks |>
   ggplot() +
   stat_density(aes(x = temp_degc_av, color = ros),
@@ -76,11 +76,10 @@ g1 <- peaks |>
                      labels = c("Non-ROS", "ROS"),
                      guide = guide_legend(override.aes = list(linetype = c("solid", "solid"),
                                                               lwd = c(1, 1)))) +
-  xlab("Temperature") +
+  xlab("Temperature (in \u00B0C)") +
   ylab("Density") +
   scale_x_continuous(limits = c(-10, 20), breaks = seq(-10, 20, 5)) +
   scale_y_continuous(limits = c(0, 0.2)) +
-  # ggtitle("Proportion of Peaks per Month by ROS") +
   theme_bw() +
   theme(legend.position = c(0.842, 0.88),
         legend.background = element_blank(),
@@ -94,11 +93,12 @@ g2 <- peaks |>
   stat_density(aes(x = prec_max, color = ros),
                geom = "line", position = "identity", lwd = 1, show.legend = FALSE) +
   scale_color_manual(values = c("#bf812d", "#41ab5d")) +
-  xlab("Precipitation") +
+  xlab("Precipitation (in mm, log2-scale)") +
   ylab("Density") +
-  scale_x_continuous(limits = c(0, 200), breaks = seq(0, 200, 50)) +
-  scale_y_continuous(limits = c(0, 0.08)) +
-  # ggtitle("Proportion of Peaks per Month by ROS") +
+  scale_x_continuous(trans = scales::log2_trans(),
+                     breaks = scales::trans_breaks("log2", function(x) 2 ^ x, n = 8),
+                     limits = c(1, 2 ^ 9)) +
+  scale_y_continuous(breaks = seq(0, 0.4, 0.1), limits = c(0, 0.4)) +
   theme_bw() +
   theme(panel.grid.minor = element_blank())
 
@@ -107,16 +107,25 @@ g3 <- peaks |>
   stat_density(aes(x = swe_av, color = ros),
                geom = "line", position = "identity", lwd = 1, show.legend = FALSE) +
   scale_color_manual(values = c("#bf812d", "#41ab5d")) +
-  xlab("SWE") +
+  xlab("SWE (in mm, log2-scale)") +
   ylab("Density") +
-  scale_x_continuous(limits = c(0, 1000), breaks = seq(0, 1000, 250)) +
-  scale_y_continuous(limits = c(0, 0.008)) +
+  scale_x_continuous(trans = scales::log2_trans(),
+                     breaks = scales::trans_breaks("log2", function(x) 2 ^ x, n = 6),
+                     limits = c(1, 2 ^ 12)) +
+  scale_y_continuous(breaks = seq(0, 0.3, 0.1), limits = c(0, 0.3)) +
+  # scale_x_continuous(limits = c(0, 1000), breaks = seq(0, 1000, 250)) +
+  # scale_y_continuous(limits = c(0, 0.008)) +
   # ggtitle("Proportion of Peaks per Month by ROS") +
   theme_bw() +
   theme(panel.grid.minor = element_blank())
 
 grid.arrange(g1, g2, g3, nrow = 3)
 dev.off()
+
+# some numeric exploration
+peaks |>
+  group_by(ros) |>
+  summarize(med = median(temp_degc_av, na.rm = TRUE))
 
 
 ## looking at distribution of empirical surge ratios
@@ -129,20 +138,40 @@ emp_surge <- peaks |>
   mutate(emp_rat = med_surge_ros / `med_surge_non-ros`)
 
 ## PAPER
+# density plot
 png("figures/ch2/paper/emp_ratios.png", height = 5, width = 6, units = "in", res = 300)
 emp_surge |>
   ggplot(aes(x = emp_rat)) +
-  geom_density(bw = 0.075) + # smooth it a bit
+  geom_density(bw = 0.09) + # smooth it a bit
   # geom_vline(aes(xintercept = median(emp_rat)), col = "red") +
   # annotate("text", x = 1.45, y = 0, label = "median = 1.164", color = "red", size = 4) +
-  scale_x_continuous(limits = c(0, 2.2), breaks = seq(0, 2.2, 0.2)) +
-  scale_y_continuous(limits = c(0, 1.25)) +
-  ggtitle("Distribution of Empirical Stream Surge Ratios") +
+  scale_x_continuous(limits = c(0, 2), breaks = seq(0, 2, 0.5)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  geom_vline(aes(xintercept = median(emp_rat)), col = "gray45") +
+  annotate("text", x = 1.25, y = 0, label = "median = 0.999", color = "gray45", size = 3.5) +
+  geom_vline(aes(xintercept = mean(emp_rat)), col = "gray45", lty = "dashed") +
+  annotate("text", x = 1.75, y = 0, label = "mean = 1.520", color = "gray45", size = 3.5) +
+  # ggtitle("Distribution of Empirical Stream Surge Ratios") +
   xlab("Ratio") +
   ylab("Density") +
   theme_bw() +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
-        axis.title = element_text(size = 13),
-        axis.text = element_text(size = 10),
-        panel.grid.minor = element_blank())
+        axis.title = element_text(size = 14),
+        axis.text = element_text(size = 11))
+dev.off()
+
+## PAPER
+# boxplot
+png("figures/ch2/paper/emp_rat_box.png", height = 2, width = 5, units = "in", res = 300)
+emp_surge |>
+  ggplot(aes(emp_rat)) +
+  geom_boxplot(outlier.color = "red", outlier.shape = 18) +
+  scale_x_continuous(trans = scales::log2_trans(),
+                     breaks = scales::trans_breaks("log2", function(x) 2 ^ x, n = 6),
+                     limits = c(1, 2 ^ 5)) +
+  # scale_y_continuous(limits = c(-.2, .2)) +
+  xlab("Ratio (log2-scale)") +
+  theme_bw() +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank())
 dev.off()
