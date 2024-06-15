@@ -169,16 +169,15 @@ mod_gam1 <- mgcv::gam(log(mult) ~
 summary(mod_gam1)
 plot(mod_gam1)
 
-# replace NA snow depth with 0
-peak_mod_sd <- peak_data_dt
-peak_mod_sd <- peak_mod_sd %>%
-  mutate(across(matches("snow_dep"), ~replace(., is.na(.), 0)))
+# replace NA snow depth with where swe is 0 with 0
+ind <- which(peak_data_dt$swe_av == 0 & is.na(peak_data_dt$snow_dep_av))
+peak_data_dt$snow_dep_av[ind] <- 0
 
 # without smp
 mod_gam2 <- mgcv::gam(log(mult) ~
                         s(temp_degc_av) +
                         s(temp_degc_med) +
-                        s(snow_dep_av) +
+                        # s(snow_dep_av) +
                         s(prec_av) +
                         s(prec_max) +
                         s(prec_med) +
@@ -190,17 +189,17 @@ mod_gam2 <- mgcv::gam(log(mult) ~
                         # smp +
                         s(lat, lon, bs = 'sos', k = 25) # increases to 63.5
                       ,
-                      data = peak_mod_sd)
+                      data = peak_data_dt)
 summary(mod_gam2)
 
 # getting r^2 for each combo
 mod_gam2 <- mgcv::gam(log(mult) ~
-                        s(temp_degc_av) +
-                        # s(temp_degc_med) +
+                        # s(temp_degc_av) +
+                        s(temp_degc_med) +
                         s(snow_dep_av) +
                         # s(prec_av) +
-                        s(prec_max) +
-                        # s(prec_med) +
+                        # s(prec_max) +
+                        s(prec_med) +
                         # s(prec_sum) +
                         # s(melt_av) +
                         # s(elev_av) +
@@ -209,7 +208,7 @@ mod_gam2 <- mgcv::gam(log(mult) ~
                         # smp +
                         s(lat, lon, bs = 'sos', k = 25) # increases to 63.5
                       ,
-                      data = peak_mod_sd)
+                      data = peak_data_dt)
 summary(mod_gam2)
 
 # how many observations are missing snow depth, in which months, and are they ros?

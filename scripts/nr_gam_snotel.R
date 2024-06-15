@@ -11,7 +11,7 @@ form_lst <- list(
   log(mult) ~ #1
     s(temp_degc_av) +
     s(temp_degc_med) +
-    # s(snow_dep_av) +
+    s(snow_dep_av) +
     s(prec_av) +
     s(prec_max) +
     s(prec_med) +
@@ -24,7 +24,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~ #2
     s(temp_degc_av) +
-    # s(snow_dep_av) +
+    s(snow_dep_av) +
     s(prec_av) +
     # s(melt_av) +
     # s(elev_av) +
@@ -34,7 +34,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~ #3
     s(temp_degc_med) +
-    # s(snow_dep_av) +
+    s(snow_dep_av) +
     s(prec_av) +
     # s(melt_av) +
     # s(elev_av) +
@@ -44,7 +44,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~ #4
     s(temp_degc_av) +
-    # s(snow_dep_av) +
+    s(snow_dep_av) +
     s(prec_max) +
     # s(melt_av) +
     # s(elev_av) +
@@ -54,7 +54,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~ #5
     s(temp_degc_med) +
-    # s(snow_dep_av) +
+    s(snow_dep_av) +
     s(prec_max) +
     # s(melt_av) +
     # s(elev_av) +
@@ -64,7 +64,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~ #6
     s(temp_degc_av) +
-    # s(snow_dep_av) +
+    s(snow_dep_av) +
     s(prec_sum) +
     # s(melt_av) +
     # s(elev_av) +
@@ -74,7 +74,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~ #7
     s(temp_degc_med) +
-    # s(snow_dep_av) +
+    s(snow_dep_av) +
     s(prec_sum) +
     # s(melt_av) +
     # s(elev_av) +
@@ -84,7 +84,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~ #8
     s(temp_degc_av) +
-    # s(snow_dep_av) +
+    s(snow_dep_av) +
     s(prec_med) +
     # s(melt_av) +
     # s(elev_av) +
@@ -94,7 +94,7 @@ form_lst <- list(
     s(lat, lon, bs = 'sos', k = 25),
   log(mult) ~ #9
     s(temp_degc_med) +
-    # s(snow_dep_av) +
+    s(snow_dep_av) +
     s(prec_med) +
     # s(melt_av) +
     # s(elev_av) +
@@ -164,7 +164,7 @@ peak_data_dt %>% # median overall by location
 
 # run gam on each gage ----------------------------------------------------
 # define model and train model on profiles
-gam_data <- readRDS("data-raw/modeling/gam_data_swehalved.rds")
+gam_data <- readRDS("data-raw/modeling/gam_datav2.rds")
 
 # replace NA snow depth with 0 when swe is 0
 peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf.rds")
@@ -180,6 +180,11 @@ peak_data <- peak_data_dt[, .(id, dt, mult, huc, med_bf = base_med, lat, lon,
                               snowdep = snow_dep_av,
                               prec_med = prec_max,
                               swe = swe_av, temp = temp_degc_av)]
+
+
+
+peak_data <- peak_data[sample(c(TRUE, FALSE), size = nrow(peak_data),
+                              prob = c(0.75, 0.25), replace = TRUE), ]
 
 # fit gam
 gam_obj <- mgcv::gam(log(mult) ~
