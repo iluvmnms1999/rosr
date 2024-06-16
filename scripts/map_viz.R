@@ -66,6 +66,11 @@ snotel_all <- sf::st_as_sf(snotel_filt, coords = c("lon", "lat"),
   dplyr::mutate(lon = sf::st_coordinates(geometry)[,1],
                 lat = sf::st_coordinates(geometry)[,2])
 
+# how many unique snotels did we start with?
+uni_snotel <- snotel_all |>
+  mutate(num = stringr::str_extract(site_name, "(\\d+)"))
+length(unique(uni_snotel$num))
+
 # state outlines with hucs overlaid (specify "data =")
 # https://github.com/tidyverse/ggplot2/issues/2090
 
@@ -159,6 +164,53 @@ g2 <- ggplot() +
 
 grid.arrange(g1, g2, nrow = 1)
 dev.off()
+
+### overlay huc region, snotels, and gages on just huc containing reno
+## PAPER
+library(ggmap)
+library(ggplot2)
+png("figures/ch2/paper/nev_huc_ex.png", height = 5, width = 9,
+    units = "in", res = 200)
+google_API_key <- scan(paste0(getwd(), "/google_api.txt"), what = "")
+register_google(key = google_API_key)
+
+# set bbox
+bbox <- setNames(st_bbox(huc8_west$geometry[huc8_west$huc8 == 16050102]),
+                 c("left", "bottom", "right", "top"))
+basemap_streets <- get_map(maptype = "roadmap", location = bbox, zoom = 9)
+street_map <- ggmap(basemap_streets)
+
+# crop to huc region
+nev_shp <- huc8_west$geometry[huc8_west$huc8 == 16050102]
+
+street_map +
+  geom_sf(data = nev_shp,
+          inherit.aes = FALSE,
+          color = "black", lwd = 0.75, fill = NA) +
+  geom_sf(data = filter(peaks_ref, id == 10349300), aes(color = "#e08214"),
+          size = 2) +
+  geom_sf(data = filter(snotel_sf, huc8 == 16050102), aes(color = "#542788"),
+          size = 2) +
+  scale_color_manual(values = c("#542788", "#e08214"),
+                     labels = c("SNOTEL", "Streamgage"), name = "") +
+  # scale_color_identity(guide = "legend", labels = c("SNOTEL", "Streamgage")) +
+  # values = c("#5e3c99", "#fdb863"),
+  # labels = c("SNOTEL", "Streamgage"),
+  # name = "Legend") +
+  # # ggtitle("SNOTEL Stations and Streamgages\nPost-HUC Association") +
+  # guides(color = guide_legend(override.aes = list(shape = c(3, 1)))) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = c(0.83, 0.96),
+        legend.background = element_blank(),
+        legend.text = element_text(size = 11),
+        legend.key.height = unit(0.4, "cm"),
+        legend.key.width = unit(0.2, "cm"),
+        legend.key = element_blank(),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank())
+dev.off()
+
 
 
 ## get periods of record
