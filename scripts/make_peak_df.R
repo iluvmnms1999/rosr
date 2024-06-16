@@ -16,48 +16,93 @@ dates <- peaks_all[, .(date, huc)]
 snotel_all <- readRDS("data-raw/snotel/huc_melt_elev/snotel_hucmeltelev_ALL.RDS")
 
 # take median of snotel conditions for previous five days for each date/huc
-## WHY DOES THIS TAKE SO LONG?! Damn it data table, you let me down
+beg <- Sys.time()
+data_agg <- data.frame()
 for (i in seq_len(nrow(dates))) {
   temp <- snotel_all[date %in% seq(dates$date[i] - 5,
-                                   dates$date[i], by = "day")
+                                   dates$date[i] - 1, by = "day")
                      & huc == dates$huc[i]]
-  dates$temp_degc_av[i] <- median(temp[, mean(temp_degc, na.rm = TRUE), by = id]$V1)
-  dates$temp_degc_med[i] <- median(temp[, median(temp_degc, na.rm = TRUE), by = id]$V1)
-  dates$temp_degc_min[i] <- median(temp[, min(temp_degc, na.rm = TRUE), by = id]$V1)
-  dates$temp_degc_max[i] <- median(temp[, max(temp_degc, na.rm = TRUE), by = id]$V1)
-  dates$prec_av[i] <- median(temp[, mean(prec, na.rm = TRUE), by = id]$V1)
-  dates$prec_med[i] <- median(temp[, median(prec, na.rm = TRUE), by = id]$V1)
-  dates$prec_min[i] <- median(temp[, min(prec, na.rm = TRUE), by = id]$V1)
-  dates$prec_max[i] <- median(temp[, max(prec, na.rm = TRUE), by = id]$V1)
-  dates$prec_sum[i] <- median(temp[, sum(prec, na.rm = TRUE), by = id]$V1)
-  dates$snow_dep_av[i] <- median(temp[, mean(snow_dep, na.rm = TRUE), by = id]$V1)
-  dates$snow_dep_med[i] <- median(temp[, median(snow_dep, na.rm = TRUE), by = id]$V1)
-  dates$snow_dep_min[i] <- median(temp[, min(snow_dep, na.rm = TRUE), by = id]$V1)
-  dates$snow_dep_max[i] <- median(temp[, max(snow_dep, na.rm = TRUE), by = id]$V1)
-  dates$swe_av[i] <- median(temp[, mean(swe, na.rm = TRUE), by = id]$V1)
-  dates$swe_med[i] <- median(temp[, median(swe, na.rm = TRUE), by = id]$V1)
-  dates$swe_min[i] <- median(temp[, min(swe, na.rm = TRUE), by = id]$V1)
-  dates$swe_max[i] <- median(temp[, max(swe, na.rm = TRUE), by = id]$V1)
-  dates$soil_mp8in_av[i] <- median(temp[, mean(soil_mp8in, na.rm = TRUE), by = id]$V1)
-  dates$soil_mp8in_med[i] <- median(temp[, median(soil_mp8in, na.rm = TRUE), by = id]$V1)
-  dates$soil_mp8in_min[i] <- median(temp[, min(soil_mp8in, na.rm = TRUE), by = id]$V1)
-  dates$soil_mp8in_max[i] <- median(temp[, max(soil_mp8in, na.rm = TRUE), by = id]$V1)
-  dates$soil_mp20in_av[i] <- median(temp[, mean(soil_mp20in, na.rm = TRUE), by = id]$V1)
-  dates$soil_mp20in_med[i] <- median(temp[, median(soil_mp20in, na.rm = TRUE), by = id]$V1)
-  dates$soil_mp20in_min[i] <- median(temp[, min(soil_mp20in, na.rm = TRUE), by = id]$V1)
-  dates$soil_mp20in_max[i] <- median(temp[, max(soil_mp20in, na.rm = TRUE), by = id]$V1)
-  dates$melt_av[i] <- median(temp[, mean(melt, na.rm = TRUE), by = id]$V1)
-  dates$melt_med[i] <- median(temp[, median(melt, na.rm = TRUE), by = id]$V1)
-  dates$melt_min[i] <- median(temp[, min(melt, na.rm = TRUE), by = id]$V1)
-  dates$melt_max[i] <- median(temp[, max(melt, na.rm = TRUE), by = id]$V1)
-  dates$elev_av[i] <- median(temp[, mean(elev, na.rm = TRUE), by = id]$V1)
-  dates$elev_med[i] <- median(temp[, median(elev, na.rm = TRUE), by = id]$V1)
-  dates$elev_min[i] <- median(temp[, min(elev, na.rm = TRUE), by = id]$V1)
-  dates$elev_max[i] <- median(temp[, max(elev, na.rm = TRUE), by = id]$V1)
+  all_vars <- temp[, .(temp_degc_av = mean(temp_degc, na.rm = TRUE),
+                       temp_degc_med = median(temp_degc, na.rm = TRUE),
+                       temp_degc_min = min(temp_degc, na.rm = TRUE),
+                       temp_degc_max = max(temp_degc, na.rm = TRUE),
+                       prec_av = mean(prec, na.rm = TRUE),
+                       prec_med = median(prec, na.rm = TRUE),
+                       prec_min = min(prec, na.rm = TRUE),
+                       prec_max = max(prec, na.rm = TRUE),
+                       prec_sum = sum(prec, na.rm = TRUE),
+                       snow_dep_av = mean(snow_dep, na.rm = TRUE),
+                       snow_dep_med = median(snow_dep, na.rm = TRUE),
+                       snow_dep_min = min(snow_dep, na.rm = TRUE),
+                       snow_dep_max = max(snow_dep, na.rm = TRUE),
+                       swe_av = mean(swe, na.rm = TRUE),
+                       swe_med = median(swe, na.rm = TRUE),
+                       swe_min = min(swe, na.rm = TRUE),
+                       swe_max = max(swe, na.rm = TRUE),
+                       soil_mp8in_av = mean(soil_mp8in, na.rm = TRUE),
+                       soil_mp8in_med = median(soil_mp8in, na.rm = TRUE),
+                       soil_mp8in_min = min(soil_mp8in, na.rm = TRUE),
+                       soil_mp8in_max = max(soil_mp8in, na.rm = TRUE),
+                       soil_mp20in_av = mean(soil_mp20in, na.rm = TRUE),
+                       soil_mp20in_med = median(soil_mp20in, na.rm = TRUE),
+                       soil_mp20in_min = min(soil_mp20in, na.rm = TRUE),
+                       soil_mp20in_max = max(soil_mp20in, na.rm = TRUE),
+                       melt_av = mean(melt, na.rm = TRUE),
+                       melt_med = median(melt, na.rm = TRUE),
+                       melt_min = min(melt, na.rm = TRUE),
+                       melt_max = max(melt, na.rm = TRUE),
+                       elev_av = mean(elev, na.rm = TRUE),
+                       elev_med = median(elev, na.rm = TRUE),
+                       elev_min = min(elev, na.rm = TRUE),
+                       elev_max = max(elev, na.rm = TRUE)
+                       ), by = id]
+
+  vars_sum <- sapply(all_vars[, -1], median)
+  data_agg <- rbind(data_agg, c(as.numeric(dates$date[i]), dates$huc[i], vars_sum))
+
+  # dates$temp_degc_av[i] <- median(temp[, mean(temp_degc, na.rm = TRUE), by = id]$V1)
+  # dates$temp_degc_med[i] <- median(temp[, median(temp_degc, na.rm = TRUE), by = id]$V1)
+  # dates$temp_degc_min[i] <- median(temp[, min(temp_degc, na.rm = TRUE), by = id]$V1)
+  # dates$temp_degc_max[i] <- median(temp[, max(temp_degc, na.rm = TRUE), by = id]$V1)
+  # dates$prec_av[i] <- median(temp[, mean(prec, na.rm = TRUE), by = id]$V1)
+  # dates$prec_med[i] <- median(temp[, median(prec, na.rm = TRUE), by = id]$V1)
+  # dates$prec_min[i] <- median(temp[, min(prec, na.rm = TRUE), by = id]$V1)
+  # dates$prec_max[i] <- median(temp[, max(prec, na.rm = TRUE), by = id]$V1)
+  # dates$prec_sum[i] <- median(temp[, sum(prec, na.rm = TRUE), by = id]$V1)
+  # dates$snow_dep_av[i] <- median(temp[, mean(snow_dep, na.rm = TRUE), by = id]$V1)
+  # dates$snow_dep_med[i] <- median(temp[, median(snow_dep, na.rm = TRUE), by = id]$V1)
+  # dates$snow_dep_min[i] <- median(temp[, min(snow_dep, na.rm = TRUE), by = id]$V1)
+  # dates$snow_dep_max[i] <- median(temp[, max(snow_dep, na.rm = TRUE), by = id]$V1)
+  # dates$swe_av[i] <- median(temp[, mean(swe, na.rm = TRUE), by = id]$V1)
+  # dates$swe_med[i] <- median(temp[, median(swe, na.rm = TRUE), by = id]$V1)
+  # dates$swe_min[i] <- median(temp[, min(swe, na.rm = TRUE), by = id]$V1)
+  # dates$swe_max[i] <- median(temp[, max(swe, na.rm = TRUE), by = id]$V1)
+  # dates$soil_mp8in_av[i] <- median(temp[, mean(soil_mp8in, na.rm = TRUE), by = id]$V1)
+  # dates$soil_mp8in_med[i] <- median(temp[, median(soil_mp8in, na.rm = TRUE), by = id]$V1)
+  # dates$soil_mp8in_min[i] <- median(temp[, min(soil_mp8in, na.rm = TRUE), by = id]$V1)
+  # dates$soil_mp8in_max[i] <- median(temp[, max(soil_mp8in, na.rm = TRUE), by = id]$V1)
+  # dates$soil_mp20in_av[i] <- median(temp[, mean(soil_mp20in, na.rm = TRUE), by = id]$V1)
+  # dates$soil_mp20in_med[i] <- median(temp[, median(soil_mp20in, na.rm = TRUE), by = id]$V1)
+  # dates$soil_mp20in_min[i] <- median(temp[, min(soil_mp20in, na.rm = TRUE), by = id]$V1)
+  # dates$soil_mp20in_max[i] <- median(temp[, max(soil_mp20in, na.rm = TRUE), by = id]$V1)
+  # dates$melt_av[i] <- median(temp[, mean(melt, na.rm = TRUE), by = id]$V1)
+  # dates$melt_med[i] <- median(temp[, median(melt, na.rm = TRUE), by = id]$V1)
+  # dates$melt_min[i] <- median(temp[, min(melt, na.rm = TRUE), by = id]$V1)
+  # dates$melt_max[i] <- median(temp[, max(melt, na.rm = TRUE), by = id]$V1)
+  # dates$elev_av[i] <- median(temp[, mean(elev, na.rm = TRUE), by = id]$V1)
+  # dates$elev_med[i] <- median(temp[, median(elev, na.rm = TRUE), by = id]$V1)
+  # dates$elev_min[i] <- median(temp[, min(elev, na.rm = TRUE), by = id]$V1)
+  # dates$elev_max[i] <- median(temp[, max(elev, na.rm = TRUE), by = id]$V1)
 }
+# reset names and convert dates back to dates
+names(data_agg) <- c("date", "huc", names(vars_sum))
+data_agg$date <- as.Date(data_agg$date)
+
 # save data table
-is.na(dates) <- sapply(dates, is.infinite)
-saveRDS(dates, "data-raw/modeling/snotel_av_med_FIXED.rds")
+is.na(data_agg) <- sapply(data_agg, is.infinite)
+saveRDS(data_agg, "data-raw/modeling/snotel_av_med_FIXED.rds")
+end <- Sys.time()
+end - beg
 
 # which STATIONS have smp reported for at least part of their period of record?
 stat_soilmp <- snotel_all[, .(total = .N,
