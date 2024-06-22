@@ -16,12 +16,11 @@ dates <- peaks_all[, .(date, huc)]
 snotel_all <- readRDS("data-raw/snotel/huc_melt_elev/snotel_hucmeltelev_ALL.RDS")
 
 # take median of snotel conditions for previous five days for each date/huc
-beg <- Sys.time()
 data_agg <- data.frame()
 for (i in seq_len(nrow(dates))) {
-  temp <- snotel_all[date %in% seq(dates$date[i] - 5,
-                                   dates$date[i] - 1, by = "day")
-                     & huc == dates$huc[i]]
+  temp <- snotel_all[huc == dates$huc[i]]
+  temp <- temp[date %in% seq(dates$date[i] - 5,
+                                   dates$date[i] - 1, by = "day")]
   all_vars <- temp[, .(temp_degc_av = mean(temp_degc, na.rm = TRUE),
                        temp_degc_med = median(temp_degc, na.rm = TRUE),
                        temp_degc_min = min(temp_degc, na.rm = TRUE),
@@ -94,15 +93,13 @@ for (i in seq_len(nrow(dates))) {
   # dates$elev_min[i] <- median(temp[, min(elev, na.rm = TRUE), by = id]$V1)
   # dates$elev_max[i] <- median(temp[, max(elev, na.rm = TRUE), by = id]$V1)
 }
-# reset names and convert dates back to dates
+# reset names and convert dates back to dates, replace Inf with NA
 names(data_agg) <- c("date", "huc", names(vars_sum))
 data_agg$date <- as.Date(data_agg$date)
+is.na(data_agg) <- sapply(data_agg, is.infinite)
 
 # save data table
-is.na(data_agg) <- sapply(data_agg, is.infinite)
 saveRDS(data_agg, "data-raw/modeling/snotel_av_med_FIXED.rds")
-end <- Sys.time()
-end - beg
 
 # which STATIONS have smp reported for at least part of their period of record?
 stat_soilmp <- snotel_all[, .(total = .N,

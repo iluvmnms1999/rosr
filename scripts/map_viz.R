@@ -18,7 +18,7 @@ west <- subset(states, abbr %in% c("NV", "CA", "CO", "ID", "MT", "NM",
 huc8_west <- readRDS("data-raw/huc8_west.rds")
 
 # get retained peaks
-peaks_ref <- readRDS("data-raw/modeling/peak_data_sf.rds")
+peaks_ref <- readRDS("data-raw/modeling/peak_data_sf_FIXED.rds")
 peaks_ref <- st_as_sf(peaks_ref)
 
 # get all peaks

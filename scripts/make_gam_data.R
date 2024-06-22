@@ -10,8 +10,9 @@ library(tidyverse)
 # predict with gam twice for each location using both profiles, compute ratio
 # of both predictions and examine distribution of all ratios
 
-# import peak data
-peak_data <- readRDS("data-raw/modeling/peak_data_sf.rds")
+# import peak data - only thing changed between v2 and v3 is that v3 uses updated
+# peak df
+peak_data <- readRDS("data-raw/modeling/peak_data_sf_FIXED.rds")
 data.table::setDT(peak_data)
 
 # get snotel summaries
@@ -90,7 +91,7 @@ test <- gam_data |>
   pivot_wider(names_from = var, values_from = val) |>
   data.table::setDT()
 
-saveRDS(test, "data-raw/modeling/gam_datav2.rds")
+saveRDS(test, "data-raw/modeling/gam_datav3.rds")
 
 
 ## get summaries using halved med ann max for ros swe ----------------------------

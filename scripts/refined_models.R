@@ -128,7 +128,7 @@ saveRDS(peaks_sf, "data-raw/modeling/peak_data_sf.rds")
 
 # Baseline model (nothing) ------------------------------------------------
 # load data matrix
-peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf.rds")
+peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf_FIXED.rds")
 
 # 10 fold cross-validation for non-regionalized gam
 global_mean_preds <- rep(as.numeric(NA), nrow(peak_data_dt))
@@ -148,7 +148,7 @@ library(mgcv)
 library(dplyr)
 
 # load data matrix
-peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf.rds")
+peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf_FIXED.rds")
 
 # with smp
 mod_gam1 <- mgcv::gam(log(mult) ~
@@ -169,9 +169,6 @@ mod_gam1 <- mgcv::gam(log(mult) ~
 summary(mod_gam1)
 plot(mod_gam1)
 
-# replace NA snow depth with where swe is 0 with 0
-ind <- which(peak_data_dt$swe_av == 0 & is.na(peak_data_dt$snow_dep_av))
-peak_data_dt$snow_dep_av[ind] <- 0
 
 # without smp
 mod_gam2 <- mgcv::gam(log(mult) ~
@@ -196,7 +193,7 @@ summary(mod_gam2)
 mod_gam2 <- mgcv::gam(log(mult) ~
                         # s(temp_degc_av) +
                         s(temp_degc_med) +
-                        s(snow_dep_av) +
+                        # s(snow_dep_av) +
                         # s(prec_av) +
                         # s(prec_max) +
                         s(prec_med) +

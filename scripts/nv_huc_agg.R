@@ -5,7 +5,7 @@ library(imputeTS)
 library(ggplot2)
 
 # load peak data
-peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf.rds")
+peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf_FIXED.rds")
 
 # subset to nevada -- use third peak from bottom since it's the only one that
 # was classified as ROS
@@ -21,7 +21,7 @@ for (i in seq_along(states)) {
 
 # take median of snotel conditions for previous five days for each date/huc
 temp <- snotel_all[date %in% seq(as.Date("2017-02-10") - 5,
-                                 as.Date("2017-02-10"), by = "day")
+                                 as.Date("2017-02-10") - 1, by = "day")
                    & huc == 16050102]
 
 # how many unique snotels are there?

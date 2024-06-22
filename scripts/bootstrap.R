@@ -1,5 +1,5 @@
 ## load data matrix
-peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf.rds")
+peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf_FIXED.rds")
 ind <- which(peak_data_dt$swe_av == 0 & is.na(peak_data_dt$snow_dep_av))
 peak_data_dt$snow_dep_av[ind] <- 0
 
@@ -9,10 +9,10 @@ peak_data <- peak_data_dt[, .(id, dt, mult, huc, med_bf = base_med, lat, lon,
                               ros,
                               snowdep = snow_dep_av,
                               prec_med = prec_max,
-                              swe = swe_av, temp = temp_degc_av)]
+                              swe = swe_av, temp = temp_degc_med)]
 
 ## load prediction profiles
-gam_data <- readRDS("data-raw/modeling/gam_datav2.rds")
+gam_data <- readRDS("data-raw/modeling/gam_data_swehalved.rds")
 
 ## set up formula
 form1 <- log(mult) ~
@@ -63,7 +63,6 @@ median_fit <- function(pdata, gdata, formula) {
   med
 }
 
-set.seed(90210)
 med_distr <- function(pdata, gdata, formula, reps, inds) {
   # set seed prior to run
   replicates <- reps # goal would be at least 100, but 500 ideal
@@ -82,8 +81,9 @@ med_distr <- function(pdata, gdata, formula, reps, inds) {
 indices <- 1:nrow(peak_data)
 
 # get medians for both formulas
-wsd <- med_distr(peak_data, gam_data, form1, 500, indices)
-wosd <- med_distr(peak_data, gam_data, form2, 500, indices)
+set.seed(90210)
+wsd <- med_distr(peak_data, gam_data, form1, 200, indices)
+wosd <- med_distr(peak_data, gam_data, form2, 200, indices)
 
 # make data frame
 meds_df <- data.frame(wsd, wosd) |>
@@ -95,23 +95,23 @@ med_vals <- meds_df |>
 
 # plot
 # PAPER
-png("figures/ch3/paper/med_distrs_500.png", width = 6, height = 5, units = "in", res = 200)
+png("figures/ch3/paper/med_distrs_halved.png", width = 6, height = 5, units = "in", res = 200)
 meds_df |>
   ggplot() +
   stat_density(aes(x = med, col = form), geom = "line", position = "identity", lwd = 1) + # smooth it a bit w/ bw = 0.075
   geom_vline(data = med_vals, aes(xintercept = median), lty = "dashed") +
-  annotate("text", x = med_vals$median[1] - .08, y = 9,
+  annotate("text", x = med_vals$median[1] - .08, y = 12,
            label = paste0("median = ", round(med_vals$median[1], 2)), size = 3.5) +
-  annotate("text", x = med_vals$median[2] + .08, y = 4.7,
+  annotate("text", x = med_vals$median[2] + .08, y = 6.7,
            label = paste0("median = ", round(med_vals$median[2], 2)), size = 3.5) +
   scale_x_continuous(limits = c(0.75, 1.5), breaks = seq(0.75, 1.5, 0.25)) +
-  scale_y_continuous(limits = c(0, 9), breaks = seq(0, 9, 3)) +
+  scale_y_continuous(limits = c(0, 12), breaks = seq(0, 12, 3)) +
   scale_color_manual(values = rev(c("blue", "orange")),
                      labels = rev(c("With Snowdep", "Without Snowdep"))) +
   guides(color = guide_legend(override.aes = list(lty = c(1, 1),
                                                   lwd = c(1, 1)))) +
   # ggtitle("Distribution of Bootstrapped Ratio Medians: 100 Rep") +
-  xlab("Median Ratio") +
+  xlab("ROS Stream Surge Ratio") +
   ylab("Density") +
   theme_bw() +
   theme(plot.title = element_text(hjust = 0.5, size = 15),
