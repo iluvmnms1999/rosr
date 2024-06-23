@@ -256,8 +256,8 @@ library(sf)
 library(ggplot2)
 
 # read in data
-peak_data_dt <- readRDS("data-raw/modeling/peak_data_dt.rds")
-ws <- readRDS("data-raw/wbd/ws_huc4_geom.rds")
+peak_data_dt <- readRDS("data-raw/modeling/peak_data_sf_FIXED.rds")
+ws <- readRDS("data-raw/wbd/ws_huc8_geom.rds")
 
 # get watersheds for all states, combine
 # regions <- c("10", "11", "13", "14", "15", "16", "17", "18")
@@ -310,24 +310,18 @@ predict.gam_limit <- function(object, newobs, se.fit = FALSE) {
 }
 
 # precalculate distances
-huc4_dist <- remap::redist(peak_data_dt, ws, region_id = huc4)
+huc4_dist <- remap::redist(peak_data_dt, ws, region_id = huc8)
 
 # Initialize predictions
 gam_huc4_preds <- rep(as.numeric(NA), nrow(peak_data_dt))
 
 # Formula for regional GAMs
 gam_huc4_fml <- log(mult) ~
-  s(temp_degc_av) +
   s(temp_degc_med) +
   s(snow_dep_av) +
-  s(prec_av) +
   s(prec_max) +
-  s(prec_med) +
-  s(melt_av) +
-  s(elev_av) +
   s(swe_av) +
-  s(base_med) +
-  smp +
+  s(log(base_med)) +
   s(lat, lon, bs = 'sos', k = 25)
 
 # Build and test models with 10 fold cross-validation
@@ -335,7 +329,7 @@ for (i in 1:10) {
   index <- peak_data_dt$cv == i
 
   gam_huc4 <- remap::remap(
-    peak_data_dt[!index, ], ws, region_id = huc4,
+    peak_data_dt[!index, ], ws, region_id = huc8,
     model_function = gam_limit,
     buffer = 50, min_n = 20,
     distances = huc4_dist[!index, ],

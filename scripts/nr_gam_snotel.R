@@ -258,6 +258,36 @@ dev.off()
 summary(ratios$mult_ratio)
 
 
+## PAPER
+# regional effects of GAM
+png("figures/ch3/paper/gam_effects.png", height = 5, width = 6, units = "in", res = 300)
+par(mfrow = c(2, 3))
+plot(gam_obj, select = 1,
+     xlab = "Temperature", ylab = "s(Temperature, 7.11)",
+     xlim = c(-20, 40), ylim = c(-5, 5))
+plot(gam_obj, select = 2,
+     xlab = "Snow Depth", ylab = "s(Snow Depth, 8.33)",
+     xlim = c(0, 400), ylim = c(-2, 2)
+     )
+plot(gam_obj, select = 3,
+     xlab = "Precipitation", ylab = "s(Precipitation, 7.2)",
+     xlim = c(0, 250), ylim = c(-1, 3)
+)
+plot(gam_obj, select = 4,
+     xlab = "SWE", ylab = "s(SWE, 3.05)",
+     xlim = c(0, 2000), ylim = c(-2, 2)
+)
+plot(gam_obj, select = 5,
+     xlab = "log(Baseflow)", ylab = "s(log(Baseflow), 7.23)",
+     xlim = c(-10, 15), ylim = c(-5, 20)
+)
+dev.off()
+
+
+
+
+
+
 
 
 
